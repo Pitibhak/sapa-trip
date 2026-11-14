@@ -167,7 +167,7 @@ const SEED_META = {"d1": {"04:50": ["", "dmk"], "08:45": ["Noi Bai International
 function seed(){
   const it = (time,title,local,desc,cost,map,link,locked) => ({id:uid(),time,title,local:local||'',desc:desc||'',cost:cost||'',map:map||'',link:link||'',locked:!!locked});
   const s = {
-    v:5, rev:1, log:[LOG_START()], updatedAt:Date.now(), updatedBy:'แผนแนะนำ',
+    v:6, rev:1, log:[LOG_START()], updatedAt:Date.now(), updatedBy:'แผนแนะนำ',
     days:[
       {id:'d1', date:'จ. 28 ธ.ค. 2026', title:'วันที่ 1 · กรุงเทพ → ฮานอย (เที่ยวฮานอยทั้งวัน + รถไฟกลางคืน)', notes:'กระเป๋าถือขึ้นเครื่องอย่างเดียว 7 กก./คน → ฝากล็อกเกอร์ที่สถานีรถไฟได้ เดินเที่ยวตัวเบา', items:[
         it('04:50','ถึงสนามบินดอนเมือง อาคาร 1','Don Mueang Airport T1','ไฟลท์ต่างประเทศ เผื่อเวลา ~2 ชม. • กระเป๋าถือรวมของใช้ส่วนตัวไม่เกิน 7 กก. (ไม่มีโหลด) • ของเหลวไม่เกิน 100 มล./ชิ้น','',M('Don Mueang International Airport Terminal 1')),
@@ -236,6 +236,7 @@ function seed(){
   s.days.forEach(d=>d.items.forEach(x=>{ applyMeta(x, (SEED_META[d.id]||{})[x.time]); applyBudgetMeta(x, (BUDGET_META[d.id]||{})[x.time]); }));
   for(const c of ['sapa','hanoi']) s.hotels[c].forEach(h=>{ h.priceTHB = HOTEL_PRICE[h.id]||0; });
   s.budget = JSON.parse(JSON.stringify(SEED_BUDGET));
+  applyHotelBooking(s);
   return s;
 }
 function applyBudgetMeta(x, m){
@@ -269,7 +270,34 @@ function toBaht(t){
   return t;
 }
 function fixPrices(t){ if(typeof t!=='string') return t; for(const [o,n] of PRICE_FIX) if(t.includes(o)) t=t.split(o).join(n); return toBaht(t); }
-function needsMigration(st){ return (st.v||1) < 5 || !st.budget || !Array.isArray(st.log) || st.days.some(d=>d.items.some(x=>x.loc===undefined||x.img===undefined)); }
+/* ===== Sapa hotel booking (Agoda, booked 14 พ.ย. 2026) — booking no. masked because the page is shared by link ===== */
+const HOTEL_BOOKING = {site:'Agoda', ref:'•••••0121', checkin:'อ. 29 ธ.ค. 2026 · เช็คอิน 14:00', checkout:'พ. 30 ธ.ค. 2026', nights:1, rooms:2,
+  roomsVND:3362920, feesVND:450632, totalVND:3813552, maxVND:4004230, payDate:'20 ธ.ค. 2026', freeCancel:'21 ธ.ค. 2026 เวลา 23:59 (เวลาซาปา)'};
+const BK_NAME = 'Sapa CatCat Hills Resort & Spa', BK_LOC = 'Sapa CatCat Hills Resort & Spa, 086 Fansipan, Sa Pa', OLD_H = 'Sapa Fansipan View House';
+const vnd2thb = v => Math.round(v / RATE.VND_PER_THB);
+function applyHotelBooking(st){
+  const L = st.hotels.sapa; let h = L.find(x=>x.id==='h-s3') || L.find(x=>/catcat hills/i.test(x.name||''));
+  if(!h){ h = {id:'h-s3', links:[['Agoda','https://www.agoda.com/en-nz/sapa-catcat-hills-resort-spa/hotel/sapa-vn.html']]}; L.push(h); }
+  const tot = vnd2thb(HOTEL_BOOKING.totalVND);
+  Object.assign(h, {name:BK_NAME, area:'086 Fansipan, Sa Pa · ใจกลางเมืองซาปา ห่างหมู่บ้านกัตกัตเพียง 559 ม. · วิวภูเขา',
+    why:'✅ ที่พักที่จองแล้ว • 4 ดาว สไตล์ปราสาทฝรั่งเศส สระอินฟินิตี้วิวเขา สปา • 2 ห้อง สำหรับ 4 คน',
+    price:`ราคาจริง (Agoda) ≈ ฿${tot.toLocaleString('en-US')} รวมภาษี/ค่าธรรมเนียม · 2 ห้อง × 1 คืน ≈ ฿${Math.round(tot/4).toLocaleString('en-US')}/คน`,
+    priceTHB: Math.round(tot/HOTEL_BOOKING.rooms), booked: HOTEL_BOOKING,
+    map: M(BK_NAME+' 086 Fansipan Sa Pa')});
+  st.hotels.sapa = [h, ...L.filter(x=>x!==h)];
+  st.budget = st.budget || JSON.parse(JSON.stringify(SEED_BUDGET)); st.budget.hotelPick = h.id; st.budget.hotelExcluded = false;
+  st.days.forEach(d=>d.items.forEach(x=>{
+    if(/^เช็คอินที่พัก/.test(x.title||'') && d.id==='d2'){
+      Object.assign(x, {title:'เช็คอินที่พัก: '+BK_NAME+' ✅ จองแล้ว', local:'086 Fansipan, Sa Pa', loc:BK_LOC, map:M(BK_LOC), locked:true, img:'', imgCredit:'', imgPage:'', cat:'stay', costTHB:0,
+        desc:'เช็คอิน 14:00 • คืน 29 ธ.ค. (1 คืน) • 2 ห้อง สำหรับ 4 คน • จองผ่าน Agoda (ยังไม่ตัดเงิน: ตัดบัตรอัตโนมัติ 20 ธ.ค.) • ยกเลิกฟรีถึง 21 ธ.ค. 23:59 เวลาซาปา • ห่างหมู่บ้านกัตกัต 559 ม. เดินลงไปได้'});
+      return; }
+    if((x.loc||'').includes(OLD_H)){ x.loc = BK_LOC; x.map = M(BK_LOC); }
+    for(const f of ['title','desc','local']) if(typeof x[f]==='string') x[f] = x[f].split(OLD_H).join(BK_NAME);
+  }));
+  const d2 = st.days.find(d=>d.id==='d2'); if(d2 && !(d2.notes||'').includes('คืนนี้นอน')) d2.notes = `🛏️ คืนนี้นอน: ${BK_NAME} ✅ จองแล้ว (2 ห้อง, Agoda) • ` + (d2.notes||'').split(OLD_H).join(BK_NAME).replace('~10–15 นาที','~559 ม.');
+  const d3 = st.days.find(d=>d.id==='d3'); if(d3 && !(d3.notes||'').includes('จองไว้ 1 คืน')) d3.notes = (d3.notes||'') + ' • 🏨 ที่พักจองไว้ 1 คืน (29 ธ.ค.) ถ้าเลือกแผน A ต้องจองคืน 30 ธ.ค. เพิ่ม';
+}
+function needsMigration(st){ return (st.v||1) < 6 || !st.budget || !Array.isArray(st.log) || st.days.some(d=>d.items.some(x=>x.loc===undefined||x.img===undefined)); }
 function migrate(st){
   const idx = seedIndex();
   st.days.forEach(d=>d.items.forEach(x=>{
@@ -293,7 +321,12 @@ function migrate(st){
     if(!st.budget) st.budget = JSON.parse(JSON.stringify(SEED_BUDGET));
   }
   if(!Array.isArray(st.log)) st.log = [LOG_START()];
-  st.v = 5;
+  if((st.v||1) < 6){ applyHotelBooking(st);
+    const tot = vnd2thb(HOTEL_BOOKING.totalVND), e = {id:'booking-sapa-catcat', ts:Date.now(), who:'Pitibhak', type:'✅ จองที่พัก', day:'d2', itemId:'', item:BK_NAME,
+      ch:[['ที่พักคืน 29 ธ.ค.', OLD_H, BK_NAME+' (2 ห้อง)'], ['ราคาที่พัก (รวม)', '', `฿${tot.toLocaleString('en-US')} (${HOTEL_BOOKING.totalVND.toLocaleString('en-US')} ₫)`], ['งบที่พัก/คน', '', '฿'+Math.round(tot/4).toLocaleString('en-US')]],
+      note:'จองผ่าน Agoda แล้ว • ตัดบัตรอัตโนมัติ 20 ธ.ค. • ยกเลิกฟรีถึง 21 ธ.ค. 23:59 (เวลาซาปา)'};
+    if(!st.log.some(x=>x.id===e.id)) st.log.push(e); }
+  st.v = 6;
 }
 const LOG_START = () => ({id:'log-start', ts:Date.now()-1000, who:'ระบบ', type:'ระบบ', day:'', itemId:'', item:'', ch:[], note:'📜 เริ่มบันทึกประวัติการแก้ไขวันนี้ (14 พ.ย. 2026) — ทุกการแก้ไขหลังจากนี้จะแสดงที่แท็บนี้'});
 
@@ -335,7 +368,7 @@ async function load(){
     }
     state = remote; baseRev = state.rev; online = true; lastSync = Date.now(); cache();
     setSync('ok','🟢 ซิงก์แล้ว '+hhmm(lastSync));
-    if(needsMigration(state)){ const fromV = state.v||1; mutate(s=>{ if(needsMigration(s)) migrate(s); }, '', 'ระบบ', {type:'ระบบ', note:`อัปเดตโครงสร้างข้อมูล v${fromV} → v5 (เก็บโหวต/โน้ต/งบไว้ครบ)`}); }
+    if(needsMigration(state)){ const fromV = state.v||1; mutate(s=>{ if(needsMigration(s)) migrate(s); }, '', 'ระบบ', {type:'ระบบ', note:`อัปเดตโครงสร้างข้อมูล v${fromV} → v6 (เก็บโหวต/โน้ต/งบ/ประวัติไว้ครบ)`}); }
   }catch(e){
     console.warn(e); online = false;
     state = JSON.parse(localStorage.getItem(LS)||'null') || seed();
@@ -424,8 +457,8 @@ document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==
 /* ===================== RENDER ===================== */
 let tab = 'plan'; const collapsed = new Set();
 /* ===================== ACTIVITY LOG ===================== */
-const LOG_TYPES = ['เพิ่ม','แก้ไข','ลบ','ย้าย','ตัดออกจากงบ','รวมกลับ','แก้ราคา','โหวตแผนกลับ','❤️ที่พัก','แก้โน้ต','รีเซ็ต','ระบบ'];
-const TYPE_ICON = {'เพิ่ม':'➕','แก้ไข':'✏️','ลบ':'🗑️','ย้าย':'↕️','ตัดออกจากงบ':'✂️','รวมกลับ':'↩️','แก้ราคา':'💰','โหวตแผนกลับ':'✈️','❤️ที่พัก':'❤️','แก้โน้ต':'📝','รีเซ็ต':'♻️','ระบบ':'⚙️'};
+const LOG_TYPES = ['✅ จองที่พัก','เพิ่ม','แก้ไข','ลบ','ย้าย','ตัดออกจากงบ','รวมกลับ','แก้ราคา','โหวตแผนกลับ','❤️ที่พัก','แก้โน้ต','รีเซ็ต','ระบบ'];
+const TYPE_ICON = {'✅ จองที่พัก':'🏨','เพิ่ม':'➕','แก้ไข':'✏️','ลบ':'🗑️','ย้าย':'↕️','ตัดออกจากงบ':'✂️','รวมกลับ':'↩️','แก้ราคา':'💰','โหวตแผนกลับ':'✈️','❤️ที่พัก':'❤️','แก้โน้ต':'📝','รีเซ็ต':'♻️','ระบบ':'⚙️'};
 const WHO_COLOR = {Pitibhak:'#2563eb',Sarit:'#db2777',Jirateep:'#ea580c',Tawinchai:'#7c3aed','ไม่ระบุชื่อ':'#9ca3af','ระบบ':'#475569'};
 let logWho = '', logType = '';
 const TZ = 'Asia/Bangkok';
@@ -499,7 +532,9 @@ function budgetRows(){
     rows.push({key:'i:'+d.id+':'+x.id, kind:'item', day:d.id, id:x.id, title:x.title, sub:d.date.split(' ').slice(0,3).join(' ')+' · '+x.time, cat:x.cat||guessCat(x), cost:c, included:!x.excluded && !planOff, excluded:!!x.excluded, paid:!!x.paid, planOff}); }));
   (B.lines||[]).forEach(l=>{ const planOff = l.plan && l.plan!==plan;
     rows.push({key:'l:'+l.id, kind:'line', id:l.id, title:l.title, sub:'รายการงบ', cat:l.cat, cost:+l.costTHB||0, included:!l.excluded && !planOff, excluded:!!l.excluded, paid:!!l.paid, planOff, custom:!!l.custom}); });
-  const h = pickedHotel(); if(h){ const nights = plan==='A'?2:1; const c = Math.round((+h.priceTHB||0)*nights/4);
+  const h = pickedHotel(); if(h && h.booked){ const bk=h.booked, tot=vnd2thb(bk.totalVND), mx=vnd2thb(bk.maxVND), n1=Math.round(tot/4), extra = plan==='A' ? n1 : 0;
+    rows.push({key:'hotel', kind:'hotel', booked:true, title:`ที่พักซาปา: ${h.name} ✅ จองแล้ว (ราคาจริง)`, sub:`Agoda ${bk.totalVND.toLocaleString('en-US')} ₫ ≈ ${B$(tot)} รวมภาษี (2 ห้อง × 1 คืน) ÷ 4 คน = ${B$(n1)}/คน${extra?` + คืนที่ 2 (แผน A ยังไม่จอง ประมาณ) ${B$(extra)}/คน`:''} · ตัดบัตร ${bk.payDate} ถ้าเรียกเก็บเป็นสกุลอื่นอาจถึง ~${B$(Math.round(mx/50)*50)} (≈${B$(Math.round(mx/4))}/คน)`, cat:'stay', cost:n1+extra, included:!B.hotelExcluded, excluded:!!B.hotelExcluded}); }
+  else if(h){ const nights = plan==='A'?2:1; const c = Math.round((+h.priceTHB||0)*nights/4);
     rows.push({key:'hotel', kind:'hotel', title:`ที่พักซาปา: ${h.name}`, sub:`฿${(+h.priceTHB||0).toLocaleString()}/ห้อง/คืน × ${nights} คืน ÷ 4 คน (${B.hotelPick&&B.hotelPick!=='auto'?'เลือกเอง':'ตามโหวต ❤️ มากสุด'})`, cat:'stay', cost:c, included:!B.hotelExcluded, excluded:!!B.hotelExcluded}); }
   const sub = rows.filter(r=>r.included).reduce((a,r)=>a+r.cost,0);
   rows.push({key:'buffer', kind:'buffer', title:'เผื่อฉุกเฉิน 10%', sub:'10% ของรายการที่รวมทั้งหมด', cat:'misc', cost:Math.round(sub*0.1), included:B.buffer!==false, excluded:B.buffer===false});
@@ -672,8 +707,12 @@ function renderPlan(){
 function hotelCard(x){
   const v = state.votes[x.id]||[]; const mine = v.includes(me);
   return `<div class="card hotel"><div class="pad">
-    <h3>${esc(x.name)}</h3>
+    <h3>${esc(x.name)} ${x.booked?'<span class="tag lock" style="background:#dcfce7;color:#166534">✅ จองแล้ว</span>':(state.hotels.sapa.some(h=>h.booked)&&state.hotels.sapa.includes(x)?'<span class="tag">ตัวเลือกสำรอง</span>':'')}</h3>
     <div class="small">📍 ${esc(x.area)}</div>
+    ${x.booked?`<div class="alert green" style="margin:8px 0 0;font-size:13.5px">🧾 <b>${esc(x.booked.site)}</b> เลขที่จอง ${esc(x.booked.ref)}<br>📅 ${esc(x.booked.checkin)} → ${esc(x.booked.checkout)} (${x.booked.nights} คืน) · ${x.booked.rooms} ห้อง / 4 คน<br>
+      💰 ห้อง ${x.booked.roomsVND.toLocaleString('en-US')} ₫ + ภาษี/ค่าธรรมเนียม ${x.booked.feesVND.toLocaleString('en-US')} ₫ = <b>${x.booked.totalVND.toLocaleString('en-US')} ₫ ≈ ${B$(vnd2thb(x.booked.totalVND))}</b> (≈ ${B$(vnd2thb(x.booked.totalVND)/4)}/คน)<br>
+      💳 ยังไม่ตัดเงิน — ตัดบัตรอัตโนมัติ <b>${esc(x.booked.payDate)}</b> (ถ้าเรียกเก็บเป็นสกุลอื่นอาจถึง ${x.booked.maxVND.toLocaleString('en-US')} ₫ ≈ ${B$(vnd2thb(x.booked.maxVND))})<br>
+      🆓 ยกเลิกฟรีถึง <b>${esc(x.booked.freeCancel)}</b></div>`:''}
     <div style="margin-top:6px;font-size:14px">${esc(toBaht(x.why))}</div>
     <div style="margin-top:6px;font-size:13.5px">💰 ${esc(toBaht(x.price))}</div>
     <div class="row" style="margin-top:6px;font-size:13.5px">${(x.links||[]).map(l=>safeUrl(l[1])?`<a href="${esc(l[1])}" target="_blank" rel="noopener">🔗 ${esc(l[0])}</a>`:'').join(' · ')} ${safeUrl(x.map)?` · <a href="${esc(x.map)}" target="_blank" rel="noopener">🗺️ แผนที่</a>`:''}</div>
@@ -685,7 +724,7 @@ function hotelCard(x){
 function renderHotels(){
   const top = list => { let b=null,n=0; for(const x of list){const c=(state.votes[x.id]||[]).length; if(c>n){n=c;b=x}} return b?`🏆 นำอยู่: <b>${esc(b.name)}</b> (${n} เสียง)`:'ยังไม่มีโหวต'; };
   return `<div class="alert info">แตะ 🤍 เพื่อโหวตที่พักที่ชอบ (โหวตได้หลายที่) ทุกคนเห็นผลโหวตเดียวกัน • ราคาทั้งหมดเป็น<b>ราคาประมาณ</b> กรุณาเช็คราคา/ห้องว่างจริงในลิงก์ (ช่วงปีใหม่ห้องเต็มเร็ว) • แปลงเป็นบาทที่ 1 ฿ ≈ ${RATE.VND_PER_THB} ₫, 1 US$ ≈ ${RATE.THB_PER_USD} ฿ (${RATE.date})</div>
-  <h2 class="sec">🏔️ ซาปา (คืน 29 ธ.ค. / + คืน 30 ถ้าเลือกแผน A)</h2><div class="small" style="margin:0 4px">${top(state.hotels.sapa)}</div>
+  <h2 class="sec">🏔️ ซาปา (คืน 29 ธ.ค. / + คืน 30 ถ้าเลือกแผน A)</h2>${(()=>{ const b=state.hotels.sapa.find(h=>h.booked); return b?`<div class="alert green" style="margin:4px">✅ จองแล้ว: <b>${esc(b.name)}</b> คืน 29 ธ.ค. (2 ห้อง) — อีก 2 ที่ด้านล่างเป็นตัวเลือกสำรอง</div>`:''; })()}<div class="small" style="margin:0 4px">${top(state.hotels.sapa)}</div>
   ${state.hotels.sapa.map(hotelCard).join('')}
   <button class="btn sm sec" data-act="hadd" data-city="sapa">＋ เสนอที่พักซาปาเพิ่ม</button>
   <h2 class="sec">🏙️ ฮานอย (day-use 28 ธ.ค. และ/หรือ พักช่วงเช้า 31 ธ.ค. ตามแผน B)</h2><div class="small" style="margin:0 4px">${top(state.hotels.hanoi)}</div>
@@ -722,6 +761,7 @@ function renderInfo(){
   <table class="bk">
    <tr><td>✈️ ขาไป</td><td><b>Thai AirAsia FD642</b> · จ. 28 ธ.ค. · ดอนเมือง T1 06:50 → โหน่ยบ่าย T2 08:45 · กระเป๋าถือ 7 กก. (ไม่มีโหลด)</td></tr>
    <tr><td>🚆 รถไฟ</td><td><b>SP7</b> ฮานอย → ลาวกาย · 28 ธ.ค. 22:40 → ~06:27 (29 ธ.ค.) · ตู้ 3 · ห้อง 4 เตียง · Pitibhak เตียง 19 (บน) · <i>เพื่อนๆ เช็คเลขเตียงในตั๋วตัวเอง</i></td></tr>
+   <tr><td>🏨 ที่พักซาปา</td><td><b>Sapa CatCat Hills Resort & Spa</b> (Agoda ${HOTEL_BOOKING.ref}) · อ. 29 → พ. 30 ธ.ค. (1 คืน) · 2 ห้อง · เช็คอิน 14:00 · ≈ ${B$(vnd2thb(HOTEL_BOOKING.totalVND))} · ตัดบัตร 20 ธ.ค. · ยกเลิกฟรีถึง 21 ธ.ค. 23:59</td></tr>
    <tr><td>✈️ ขากลับ</td><td><b>VietJet VJ903</b> · พฤ. 31 ธ.ค. · โหน่ยบ่าย T2 15:50 → สุวรรณภูมิ 17:40 · กระเป๋าถือ (ไม่มีโหลด)</td></tr>
   </table>
   <div class="small" style="margin-top:6px">🔐 รหัสการจองและเลขพาสปอร์ตไม่ได้ใส่ไว้ในหน้านี้ (เพราะเป็นลิงก์แชร์) ดูในอีเมล/ตั๋วของแต่ละคน</div></div></div>

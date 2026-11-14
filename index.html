@@ -89,6 +89,20 @@ ul{padding-left:20px;margin:6px 0}
 .lb img{width:100%;border-radius:12px;display:block;background:#eee}
 .chk{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--mu);margin-top:4px}
 .chk input{width:auto}
+.brow{display:flex;gap:8px;align-items:center;padding:11px 14px;border-bottom:1px solid #f1f1f1;cursor:pointer;font-size:14.5px}
+.brow .dot{width:12px;height:12px;border-radius:50%;flex:0 0 12px}
+.blist{background:#fafafa;border-bottom:1px solid var(--bd)}
+.bitem{display:flex;gap:8px;align-items:center;padding:8px 14px;border-bottom:1px solid #f0f0f0}
+.bitem .bt{font-size:13.5px;font-weight:600}
+.bitem.off .bt{text-decoration:line-through;color:#9ca3af}
+.bcost{width:78px;padding:5px 6px;border:1px solid var(--bd);border-radius:8px;text-align:right;font-size:14px;background:#fff}
+span.bcost{border:0;background:transparent}
+.tgl{border:1px solid #d1d5db;background:#fee2e2;color:#b91c1c;border-radius:999px;padding:4px 9px;font-size:12px;cursor:pointer;white-space:nowrap}
+.tgl.on{background:#dcfce7;color:#166534;border-color:#86efac}
+.tgl:disabled{opacity:.5}
+.item.excl .ti{text-decoration:line-through;color:#9ca3af}
+.tag.cut{background:#fee2e2;color:#b91c1c}
+.tag.bud{background:#ecfeff;color:#155e75}
 footer{text-align:center;color:var(--mu);font-size:12px;margin:24px 0}
 </style>
 </head>
@@ -106,6 +120,7 @@ footer{text-align:center;color:var(--mu);font-size:12px;margin:24px 0}
 </div>
 <nav class="tabs" id="tabs">
   <button data-t="plan" class="on">🗓️ แผนเที่ยว</button>
+  <button data-t="budget">💰 งบประมาณ</button>
   <button data-t="hotel">🏨 ที่พัก (โหวต)</button>
   <button data-t="return">✈️ ขากลับ 31 ธ.ค.</button>
   <button data-t="info">🎒 ข้อมูล/เตรียมตัว</button>
@@ -131,12 +146,15 @@ let _n = 0; const uid = () => Date.now().toString(36) + (_n++).toString(36) + Ma
 
 /* ===================== PHOTOS (Wikimedia Commons, openly licensed) ===================== */
 const WM = {"dmk": {"img": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/41/Don_Mueang_International_Airport_Terminal_1.JPG/330px-Don_Mueang_International_Airport_Terminal_1.JPG", "page": "https://commons.wikimedia.org/wiki/File:Don_Mueang_International_Airport_Terminal_1.JPG", "credit": "Redakie · CC BY-SA 3.0"}, "nb": {"img": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/38/Noi_Bai_International_Airport_Terminal_2_Night_View.JPG/330px-Noi_Bai_International_Airport_Terminal_2_Night_View.JPG", "page": "https://commons.wikimedia.org/wiki/File:Noi_Bai_International_Airport_Terminal_2_Night_View.JPG", "credit": "Christakis Mina · CC BY-SA 4.0"}, "gahn": {"img": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/60/Ga_Ha_Noi_Oct_2010.jpg/330px-Ga_Ha_Noi_Oct_2010.jpg", "page": "https://commons.wikimedia.org/wiki/File:Ga_Ha_Noi_Oct_2010.jpg", "credit": "calflier001 · CC BY-SA 2.0"}, "buncha": {"img": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6d/President_Barack_Obama_with_Anthony_Bourdain_at_B%C3%BAn_cha_Huong_Lien_Restaurant_in_Hanoi%2C_Vietnam.jpg/330px-President_Barack_Obama_with_Anthony_Bourdain_at_B%C3%BAn_cha_Huong_Lien_Restaurant_in_Hanoi%2C_Vietnam.jpg", "page": "https://commons.wikimedia.org/wiki/File:President_Barack_Obama_with_Anthony_Bourdain_at_B%C3%BAn_cha_Huong_Lien_Restaurant_in_Hanoi,_Vietnam.jpg", "credit": "The White House (Pete Souza) · Public domain"}, "vanmieu": {"img": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a6/Khue_Van_Cac_2024.jpg/330px-Khue_Van_Cac_2024.jpg", "page": "https://commons.wikimedia.org/wiki/File:Khue_Van_Cac_2024.jpg", "credit": "Sai Gon Dep Lam · CC BY 4.0"}, "ngocson": {"img": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c8/Huc_Bridge.jpg/330px-Huc_Bridge.jpg", "page": "https://commons.wikimedia.org/wiki/File:Huc_Bridge.jpg", "credit": "David Stanley · CC BY 2.0"}, "egg": {"img": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/54/Egg_Coffee_%286923068614%29.jpg/330px-Egg_Coffee_%286923068614%29.jpg", "page": "https://commons.wikimedia.org/wiki/File:Egg_Coffee_(6923068614).jpg", "credit": "David McKelvey from Brisbane, Australia · CC BY 2.0"}, "cathedral": {"img": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/86/St_Joseph_Cathedral%2C_Hanoi_2023.jpg/330px-St_Joseph_Cathedral%2C_Hanoi_2023.jpg", "page": "https://commons.wikimedia.org/wiki/File:St_Joseph_Cathedral,_Hanoi_2023.jpg", "credit": "Greenknight dv · CC BY-SA 4.0"}, "trainst": {"img": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/70/Train_street_in_Hanoi.jpg/330px-Train_street_in_Hanoi.jpg", "page": "https://commons.wikimedia.org/wiki/File:Train_street_in_Hanoi.jpg", "credit": "Kris Martyn · CC BY-SA 4.0"}, "pho": {"img": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/65/Beef_noodle_soup_%28Ph%E1%BB%9F_b%C3%B2%29_-_Pho_Hanoi_Authentic_2024-12-01.jpg/330px-Beef_noodle_soup_%28Ph%E1%BB%9F_b%C3%B2%29_-_Pho_Hanoi_Authentic_2024-12-01.jpg", "page": "https://commons.wikimedia.org/wiki/File:Beef_noodle_soup_(Ph%E1%BB%9F_b%C3%B2)_-_Pho_Hanoi_Authentic_2024-12-01.jpg", "credit": "Andy Li · CC0"}, "laocai": {"img": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7f/Lao_Cai_Railway_Station_%28Jan_4%2C_2019%29.jpg/330px-Lao_Cai_Railway_Station_%28Jan_4%2C_2019%29.jpg", "page": "https://commons.wikimedia.org/wiki/File:Lao_Cai_Railway_Station_(Jan_4,_2019).jpg", "credit": "Yhxc57082 · CC BY-SA 4.0"}, "fansipan": {"img": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ac/Fansipan_Cable_Car.jpg/330px-Fansipan_Cable_Car.jpg", "page": "https://commons.wikimedia.org/wiki/File:Fansipan_Cable_Car.jpg", "credit": "Christophe95 · CC BY-SA 4.0"}, "church": {"img": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f4/Nh%C3%A0_th%E1%BB%9D_%C4%91%C3%A1_Sa_Pa.jpg/330px-Nh%C3%A0_th%E1%BB%9D_%C4%91%C3%A1_Sa_Pa.jpg", "page": "https://commons.wikimedia.org/wiki/File:Nh%C3%A0_th%E1%BB%9D_%C4%91%C3%A1_Sa_Pa.jpg", "credit": "Bùi Thụy Đào Nguyên · CC BY-SA 3.0"}, "catcat": {"img": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a6/Cat_Cat_Waterfalls%2C_Sa_Pa%2C_Vietnam%2C_20240126_1230_3628.jpg/330px-Cat_Cat_Waterfalls%2C_Sa_Pa%2C_Vietnam%2C_20240126_1230_3628.jpg", "page": "https://commons.wikimedia.org/wiki/File:Cat_Cat_Waterfalls,_Sa_Pa,_Vietnam,_20240126_1230_3628.jpg", "credit": "Jakub Hałun · CC BY 4.0"}, "sapatown": {"img": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8f/Sapa_%28228139587%29.jpeg/330px-Sapa_%28228139587%29.jpeg", "page": "https://commons.wikimedia.org/wiki/File:Sapa_(228139587).jpeg", "credit": "Soibien032016 · CC0"}, "laochai": {"img": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/54/M%C6%B0%E1%BB%9Dng_Hoa_Valley_06.jpg/330px-M%C6%B0%E1%BB%9Dng_Hoa_Valley_06.jpg", "page": "https://commons.wikimedia.org/wiki/File:M%C6%B0%E1%BB%9Dng_Hoa_Valley_06.jpg", "credit": "Christophe95 · CC BY-SA 4.0"}, "tavan": {"img": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8f/Ta_Van_Muong_Ha_vallei_%2856687%29.jpg/330px-Ta_Van_Muong_Ha_vallei_%2856687%29.jpg", "page": "https://commons.wikimedia.org/wiki/File:Ta_Van_Muong_Ha_vallei_(56687).jpg", "credit": "Andre Hospers · CC BY 4.0"}, "oquyho": {"img": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/19/O_Quy_Ho_pass.jpg/330px-O_Quy_Ho_pass.jpg", "page": "https://commons.wikimedia.org/wiki/File:O_Quy_Ho_pass.jpg", "credit": "Kiếm Anh · CC BY-SA 4.0"}, "mausoleum": {"img": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/dd/Hanoi_Vietnam_Mausoleum-of-Ho-Chi-Minh-01.jpg/330px-Hanoi_Vietnam_Mausoleum-of-Ho-Chi-Minh-01.jpg", "page": "https://commons.wikimedia.org/wiki/File:Hanoi_Vietnam_Mausoleum-of-Ho-Chi-Minh-01.jpg", "credit": "CEphoto, Uwe Aranas · CC BY-SA 3.0"}, "oldquarter": {"img": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e6/H%C3%A0ng_B%E1%BA%A1c_and_H%C3%A0ng_B%E1%BB%93_streets.jpg/330px-H%C3%A0ng_B%E1%BA%A1c_and_H%C3%A0ng_B%E1%BB%93_streets.jpg", "page": "https://commons.wikimedia.org/wiki/File:H%C3%A0ng_B%E1%BA%A1c_and_H%C3%A0ng_B%E1%BB%93_streets.jpg", "credit": "Christophe95 · CC BY-SA 4.0"}};
+const BUDGET_META = {"d1": {"04:50": [0, "transfers"], "06:50": [3066, "flights", null, true], "08:45": [125, "transfers"], "10:30": [65, "stay"], "11:15": [120, "food"], "12:45": [90, "activities"], "14:15": [65, "activities"], "15:15": [55, "food"], "16:00": [0, "activities"], "17:30": [65, "food"], "18:45": [90, "food"], "20:30": [0, "food"], "21:45": [0, "trains"], "22:40": [1100, "trains", null, true]}, "d2": {"06:27": [0, "trains"], "06:40": [190, "transfers"], "07:45": [120, "food"], "08:30": [1100, "activities"], "12:00": [150, "food"], "14:00": [0, "stay"], "14:45": [200, "activities"], "17:30": [400, "food"], "19:30": [150, "food"]}, "d3": {"07:30": [100, "food"], "08:30": [250, "activities"], "12:30": [200, "food"], "13:30": [60, "transfers"], "14:30": [170, "activities"], "16:00": [0, "activities"], "18:30": [330, "food"], "20:15": [190, "transfers", "B"], "21:50": [1300, "trains", "B"]}, "d4": {"05:40": [0, "trains", "B"], "06:15": [90, "food", "B"], "07:30": [400, "stay", "B"], "09:00": [65, "activities", "B"], "11:00": [150, "food", "B"], "12:00": [125, "transfers", "B"], "13:15": [0, "flights"], "15:50": [3000, "flights", null, true]}};
+const HOTEL_PRICE = {"h-s1": 1650, "h-s2": 1350, "h-s3": 6200, "h-h1": 1600, "h-h2": 1100, "h-h3": 3700};
+const SEED_BUDGET = {"lines": [{"id": "b-food", "title": "อาหารว่าง/เครื่องดื่ม/น้ำ อื่น ๆ (ตลอด 4 วัน)", "cat": "food", "costTHB": 580}, {"id": "b-muonghoa", "title": "รถไฟ Mường Hoa (Sun Plaza ↔ สถานีกระเช้า) ไป-กลับ", "cat": "activities", "costTHB": 260}, {"id": "b-hngrab", "title": "Grab ในเมืองฮานอย", "cat": "transfers", "costTHB": 100}, {"id": "b-sapacar", "title": "เหมารถเที่ยว Moana + Ô Quy Hồ (หาร 4)", "cat": "transfers", "costTHB": 390}, {"id": "b-planA", "title": "(แผน A) รถส่วนตัว ซาปา → สนามบิน (~฿3,000/คัน หาร 4)", "cat": "transfers", "costTHB": 750, "plan": "A"}, {"id": "b-esim", "title": "eSIM / ซิมเน็ต", "cat": "misc", "costTHB": 200}, {"id": "b-tips", "title": "ทิป / ค่าห้องน้ำ / เช่าชุดกัตกัต ฯลฯ", "cat": "misc", "costTHB": 200}], "hotelPick": "auto", "plan": "auto", "buffer": true, "hotelExcluded": false};
 const SEED_META = {"d1": {"04:50": ["", "dmk"], "08:45": ["Noi Bai International Airport Terminal 2, Hanoi", "nb"], "10:30": ["Ga Hà Nội, 120 Lê Duẩn, Hà Nội", "gahn"], "11:15": ["Bún Chả Hương Liên, 24 Lê Văn Hưu, Hà Nội", "buncha"], "12:45": ["Văn Miếu - Quốc Tử Giám, Hà Nội", "vanmieu"], "14:15": ["Đền Ngọc Sơn, Hà Nội", "ngocson"], "15:15": ["Cafe Giảng, 39 Nguyễn Hữu Huân, Hà Nội", "egg"], "16:00": ["Nhà Thờ Lớn Hà Nội", "cathedral"], "17:30": ["Hanoi Train Street, Phùng Hưng, Hà Nội", "trainst"], "18:45": ["Phở Gia Truyền Bát Đàn, 49 Bát Đàn, Hà Nội", "pho"], "21:45": ["Ga Hà Nội, Trần Quý Cáp, Hà Nội", "gahn"], "22:40": ["", "gahn"]}, "d2": {"06:27": ["Ga Lào Cai, Lào Cai", "laocai"], "06:40": ["Sapa Fansipan View House, 64 Fansipan, Sa Pa", ""], "07:45": ["Mam Restaurant & Coffee, 27 Hoàng Liên, Sa Pa", ""], "08:30": ["Fansipan Legend Cable Car Station, Sa Pa", "fansipan"], "12:00": ["Nhà Thờ Đá Sa Pa", "church"], "14:00": ["Sapa Fansipan View House, 64 Fansipan, Sa Pa", ""], "14:45": ["Bản Cát Cát, Sa Pa", "catcat"], "17:30": ["Sapa Nature View Restaurant & Sky Bar, 061 Fansipan, Sa Pa", ""], "19:30": ["Chợ đêm Sa Pa", "sapatown"]}, "d3": {"07:30": ["Sapa Fansipan View House, 64 Fansipan, Sa Pa", ""], "08:30": ["Lao Chải, Sa Pa", "laochai"], "12:30": ["Tả Van, Sa Pa", "tavan"], "14:30": ["Moana Sapa", ""], "16:00": ["Cổng Trời Ô Quy Hồ", "oquyho"], "18:30": ["Quảng trường Sa Pa", "sapatown"], "20:15": ["Sapa Fansipan View House, 64 Fansipan, Sa Pa", ""], "21:50": ["Ga Lào Cai, Lào Cai", "laocai"]}, "d4": {"05:40": ["Ga Hà Nội, Trần Quý Cáp, Hà Nội", "gahn"], "06:15": ["Phở Thìn, 13 Lò Đúc, Hà Nội", "pho"], "07:30": ["Mango Apartment, 48 Phan Bội Châu, Hà Nội", ""], "09:00": ["Lăng Chủ tịch Hồ Chí Minh, Hà Nội", "mausoleum"], "11:00": ["Bánh Mì 25, 25 Hàng Cá, Hà Nội", "oldquarter"], "12:00": ["Noi Bai International Airport Terminal 2, Hanoi", "nb"], "13:15": ["", "nb"]}};
 /* ===================== SEED (แผนแนะนำ) ===================== */
 function seed(){
   const it = (time,title,local,desc,cost,map,link,locked) => ({id:uid(),time,title,local:local||'',desc:desc||'',cost:cost||'',map:map||'',link:link||'',locked:!!locked});
   const s = {
-    v:3, rev:1, updatedAt:Date.now(), updatedBy:'แผนแนะนำ',
+    v:4, rev:1, updatedAt:Date.now(), updatedBy:'แผนแนะนำ',
     days:[
       {id:'d1', date:'จ. 28 ธ.ค. 2026', title:'วันที่ 1 · กรุงเทพ → ฮานอย (เที่ยวฮานอยทั้งวัน + รถไฟกลางคืน)', notes:'กระเป๋าถือขึ้นเครื่องอย่างเดียว 7 กก./คน → ฝากล็อกเกอร์ที่สถานีรถไฟได้ เดินเที่ยวตัวเบา', items:[
         it('04:50','ถึงสนามบินดอนเมือง อาคาร 1','Don Mueang Airport T1','ไฟลท์ต่างประเทศ เผื่อเวลา ~2 ชม. • กระเป๋าถือรวมของใช้ส่วนตัวไม่เกิน 7 กก. (ไม่มีโหลด) • ของเหลวไม่เกิน 100 มล./ชิ้น','',M('Don Mueang International Airport Terminal 1')),
@@ -202,8 +220,17 @@ function seed(){
     votes:{},          // {hotelId:[names]}
     retVotes:{A:[],B:[]}
   };
-  s.days.forEach(d=>d.items.forEach(x=>applyMeta(x, (SEED_META[d.id]||{})[x.time])));
+  s.days.forEach(d=>d.items.forEach(x=>{ applyMeta(x, (SEED_META[d.id]||{})[x.time]); applyBudgetMeta(x, (BUDGET_META[d.id]||{})[x.time]); }));
+  for(const c of ['sapa','hanoi']) s.hotels[c].forEach(h=>{ h.priceTHB = HOTEL_PRICE[h.id]||0; });
+  s.budget = JSON.parse(JSON.stringify(SEED_BUDGET));
   return s;
+}
+function applyBudgetMeta(x, m){
+  const [c, cat, plan, paid] = m || [undefined, undefined];
+  if(c!==undefined) x.costTHB = c;
+  x.cat = cat || guessCat(x);
+  if(plan) x.plan = plan; if(paid) x.paid = true;
+  if(x.excluded===undefined) x.excluded = false;
 }
 function applyMeta(x, m, onlyMissing){
   const [loc,img] = m || ['',''];
@@ -229,7 +256,7 @@ function toBaht(t){
   return t;
 }
 function fixPrices(t){ if(typeof t!=='string') return t; for(const [o,n] of PRICE_FIX) if(t.includes(o)) t=t.split(o).join(n); return toBaht(t); }
-function needsMigration(st){ return (st.v||1) < 3 || st.days.some(d=>d.items.some(x=>x.loc===undefined||x.img===undefined)); }
+function needsMigration(st){ return (st.v||1) < 4 || !st.budget || st.days.some(d=>d.items.some(x=>x.loc===undefined||x.img===undefined)); }
 function migrate(st){
   const idx = seedIndex();
   st.days.forEach(d=>d.items.forEach(x=>{
@@ -241,7 +268,18 @@ function migrate(st){
     st.days.forEach(d=>{ d.notes = fixPrices(d.notes); d.items.forEach(x=>{ x.cost=fixPrices(x.cost); x.desc=fixPrices(x.desc); }); });
     for(const c of Object.keys(st.hotels||{})) st.hotels[c].forEach(h=>{ h.price=fixPrices(h.price); h.why=fixPrices(h.why); });
   }
-  st.v = 3;
+  if((st.v||1) < 4 || !st.budget){
+    st.days.forEach(d=>d.items.forEach(x=>{
+      if(x.cat!==undefined) return;              // already has budget data
+      const sx = idx[d.id+'|'+x.title];
+      if(sx){ x.costTHB = sx.costTHB; x.cat = sx.cat; if(sx.plan) x.plan = sx.plan; if(sx.paid) x.paid = true; }
+      else { const c = parseCostTHB(x.cost); if(c!==null) x.costTHB = c; x.cat = guessCat(x); }
+      if(x.excluded===undefined) x.excluded = false;
+    }));
+    for(const c of Object.keys(st.hotels||{})) st.hotels[c].forEach(h=>{ if(h.priceTHB===undefined) h.priceTHB = HOTEL_PRICE[h.id] || parseCostTHB(h.price, true) || 0; });
+    if(!st.budget) st.budget = JSON.parse(JSON.stringify(SEED_BUDGET));
+  }
+  st.v = 4;
 }
 
 /* ===================== STATE + SYNC ===================== */
@@ -327,7 +365,7 @@ async function flush(){
   }
 }
 async function poll(manual){
-  if(flushing || pending.length || $('#modal').classList.contains('on') || document.activeElement?.tagName==='TEXTAREA'){ if(manual) toast('กำลังบันทึก/แก้ไขอยู่ ลองใหม่อีกครั้ง'); return; }
+  if(flushing || pending.length || $('#modal').classList.contains('on') || ['TEXTAREA','INPUT','SELECT'].includes(document.activeElement?.tagName)){ if(manual) toast('กำลังบันทึก/แก้ไขอยู่ ลองใหม่อีกครั้ง'); return; }
   try{
     if(manual) setSync('busy','⏳ กำลังซิงก์…');
     const remote = await fetchRemote();
@@ -344,6 +382,101 @@ document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==
 
 /* ===================== RENDER ===================== */
 let tab = 'plan'; const collapsed = new Set();
+/* ===================== BUDGET ===================== */
+const CATS = [
+  {k:'flights',   n:'เที่ยวบิน',        e:'✈️', c:'#2563eb'},
+  {k:'trains',    n:'รถไฟ',            e:'🚆', c:'#7c3aed'},
+  {k:'transfers', n:'การเดินทาง',       e:'🚐', c:'#0891b2'},
+  {k:'stay',      n:'ที่พัก',            e:'🏨', c:'#16a34a'},
+  {k:'activities',n:'เที่ยว/ตั๋ว',        e:'🎟️', c:'#f59e0b'},
+  {k:'food',      n:'อาหาร',           e:'🍜', c:'#ef4444'},
+  {k:'misc',      n:'อื่น ๆ + เผื่อ 10%', e:'🧾', c:'#64748b'}];
+const CATK = Object.fromEntries(CATS.map(c=>[c.k,c]));
+const PREV_EST = 17400, TARGET = 12200;
+let budgetOpen = null;
+function guessCat(x){ const e = EMOJI(x); return e==='✈️'?'flights': e==='🚆'?'trains': e==='🍜'||e==='☕'?'food': e==='🏨'?'stay': e==='🚐'?'transfers':'activities'; }
+/* "~฿80–160/คน" -> 120 ; "/คัน" or "/ห้อง" -> divided by 4 */
+function parseCostTHB(t, perRoom){
+  if(!t) return null; t = toBaht(String(t));
+  const m = t.match(/฿\s?([\d,]+)(?:\s*[–-]\s*฿?\s?([\d,]+))?/); if(!m) return null;
+  const a = +m[1].replace(/,/g,''), b = m[2] ? +m[2].replace(/,/g,'') : a; let v = (a+b)/2;
+  if(!perRoom && /\/\s*(คัน|ห้อง|กลุ่ม)/.test(t)) v = v/4;
+  return Math.round(v);
+}
+const costPP = x => (typeof x.costTHB==='number' && !isNaN(x.costTHB)) ? x.costTHB : (parseCostTHB(x.cost) || 0);
+function activePlan(){ const p = (state.budget||{}).plan || 'auto'; if(p==='A'||p==='B') return p;
+  const a=(state.retVotes.A||[]).length, b=(state.retVotes.B||[]).length; return a>b?'A':'B'; }
+function pickedHotel(){ const B = state.budget||{}; const list = state.hotels.sapa||[];
+  if(B.hotelPick && B.hotelPick!=='auto'){ const h=list.find(h=>h.id===B.hotelPick); if(h) return h; }
+  let best=list[0], n=-1; for(const h of list){ const c=(state.votes[h.id]||[]).length; if(c>n){n=c;best=h;} } return best; }
+/* every budget row: {key, kind:'item'|'line'|'hotel'|'buffer', title, sub, cat, cost, included, paid, planOff} */
+function budgetRows(){
+  const plan = activePlan(), B = state.budget || {lines:[]}, rows = [];
+  state.days.forEach(d=>d.items.forEach(x=>{ const c = costPP(x); if(!c && !x.excluded && !x.paid) return;
+    const planOff = x.plan && x.plan!==plan;
+    rows.push({key:'i:'+d.id+':'+x.id, kind:'item', day:d.id, id:x.id, title:x.title, sub:d.date.split(' ').slice(0,3).join(' ')+' · '+x.time, cat:x.cat||guessCat(x), cost:c, included:!x.excluded && !planOff, excluded:!!x.excluded, paid:!!x.paid, planOff}); }));
+  (B.lines||[]).forEach(l=>{ const planOff = l.plan && l.plan!==plan;
+    rows.push({key:'l:'+l.id, kind:'line', id:l.id, title:l.title, sub:'รายการงบ', cat:l.cat, cost:+l.costTHB||0, included:!l.excluded && !planOff, excluded:!!l.excluded, paid:!!l.paid, planOff, custom:!!l.custom}); });
+  const h = pickedHotel(); if(h){ const nights = plan==='A'?2:1; const c = Math.round((+h.priceTHB||0)*nights/4);
+    rows.push({key:'hotel', kind:'hotel', title:`ที่พักซาปา: ${h.name}`, sub:`฿${(+h.priceTHB||0).toLocaleString()}/ห้อง/คืน × ${nights} คืน ÷ 4 คน (${B.hotelPick&&B.hotelPick!=='auto'?'เลือกเอง':'ตามโหวต ❤️ มากสุด'})`, cat:'stay', cost:c, included:!B.hotelExcluded, excluded:!!B.hotelExcluded}); }
+  const sub = rows.filter(r=>r.included).reduce((a,r)=>a+r.cost,0);
+  rows.push({key:'buffer', kind:'buffer', title:'เผื่อฉุกเฉิน 10%', sub:'10% ของรายการที่รวมทั้งหมด', cat:'misc', cost:Math.round(sub*0.1), included:B.buffer!==false, excluded:B.buffer===false});
+  return rows;
+}
+function budgetTotals(){
+  const rows = budgetRows(); const by = Object.fromEntries(CATS.map(c=>[c.k,0]));
+  let total=0, paid=0; rows.forEach(r=>{ if(!r.included) return; by[r.cat] = (by[r.cat]||0) + r.cost; total += r.cost; if(r.paid) paid += r.cost; });
+  return {rows, by, total, paid};
+}
+const B$ = v => '฿' + Math.round(v).toLocaleString('en-US');
+function donutSvg(by, total){
+  const R=80, C=2*Math.PI*R; let off=0; let segs='';
+  CATS.forEach(c=>{ const v=by[c.k]||0; if(v<=0||total<=0) return; const len=v/total*C;
+    segs += `<circle r="${R}" cx="110" cy="110" fill="none" stroke="${c.c}" stroke-width="${budgetOpen===c.k?38:30}" stroke-dasharray="${Math.max(0,len-1.5)} ${C}" stroke-dashoffset="${-off}" transform="rotate(-90 110 110)" data-act="bcat" data-cat="${c.k}" style="cursor:pointer"><title>${c.n} ${B$(v)}</title></circle>`; off+=len; });
+  return `<svg viewBox="0 0 220 220" width="100%" style="max-width:280px;display:block;margin:0 auto" role="img" aria-label="งบต่อคน">
+    <circle r="${R}" cx="110" cy="110" fill="none" stroke="#eef2f7" stroke-width="30"/>${segs}
+    <text x="110" y="100" text-anchor="middle" font-size="12" fill="#6b7280">ต่อคน (ประมาณ)</text>
+    <text x="110" y="126" text-anchor="middle" font-size="25" font-weight="700" fill="#14532d">${B$(total)}</text>
+    <text x="110" y="146" text-anchor="middle" font-size="11" fill="#6b7280">4 คน ${B$(total*4)}</text></svg>`;
+}
+function renderBudget(){
+  const {rows, by, total, paid} = budgetTotals(); const plan = activePlan(); const B = state.budget||{};
+  const saved = PREV_EST - total, need = PREV_EST - TARGET; const pct = Math.max(0, Math.min(100, saved/need*100));
+  let h = `<div class="card"><div class="pad">
+    <h3 style="margin:0 0 6px">💰 งบประมาณต่อคน</h3>
+    ${donutSvg(by,total)}
+    <div style="text-align:center;font-size:14px;margin-top:4px">รวม 4 คน <b>${B$(total*4)}</b> · จ่ายแล้ว ${B$(paid)}/คน · ยังต้องจ่าย ${B$(total-paid)}/คน</div>
+    <div class="small" style="text-align:center">แตะชิ้นโดนัทหรือหมวดด้านล่างเพื่อดู/ตัด/แก้ราคา · ทุกตัวเลขเป็นราคาประมาณ</div>
+  </div></div>
+  <div class="card"><div class="pad">
+    <div class="row" style="justify-content:space-between;font-size:14px"><span>ประมาณการเดิม <b>${B$(PREV_EST)}</b></span><span>ตอนนี้ <b>${B$(total)}</b> <span style="color:${saved>=0?'#15803d':'#b91c1c'}">(${saved>=0?'−':'+'}${B$(Math.abs(saved))})</span></span></div>
+    <div class="small" style="margin-top:6px">🎯 เป้าลด 30% → ${B$(TARGET)}/คน · ลดไปแล้ว ${Math.round(pct)}%</div>
+    <div style="height:12px;background:#eef2f7;border-radius:99px;overflow:hidden;margin-top:4px"><div style="height:100%;width:${pct}%;background:${pct>=100?'#16a34a':'#f59e0b'}"></div></div>
+    ${total<=TARGET?'<div class="small" style="color:#15803d;margin-top:4px">✅ ถึงเป้าแล้ว!</div>':`<div class="small" style="margin-top:4px">ต้องลดอีก ${B$(total-TARGET)}/คน</div>`}
+  </div></div>
+  <div class="card"><div class="pad row" style="gap:10px">
+    <label class="small">แผนกลับ <select data-bset="plan">${[['auto',`ตามโหวต (ตอนนี้ ${plan})`],['B','แผน B รถไฟกลางคืน'],['A','แผน A รถตรงไปสนามบิน']].map(([v,t])=>`<option value="${v}" ${(B.plan||'auto')===v?'selected':''}>${t}</option>`).join('')}</select></label>
+    <label class="small">ที่พักซาปา <select data-bset="hotelPick"><option value="auto" ${(B.hotelPick||'auto')==='auto'?'selected':''}>❤️ มากสุด (${esc(pickedHotel()?.name||'-')})</option>${state.hotels.sapa.map(x=>`<option value="${x.id}" ${B.hotelPick===x.id?'selected':''}>${esc(x.name)} · ${B$(x.priceTHB||0)}/ห้อง</option>`).join('')}</select></label>
+  </div></div>
+  <div class="card">`;
+  CATS.forEach(c=>{ const v = by[c.k]||0; const open = budgetOpen===c.k;
+    h += `<div class="brow" data-act="bcat" data-cat="${c.k}"><span class="dot" style="background:${c.c}"></span><span style="flex:1">${c.e} ${c.n}</span><b>${B$(v)}</b><span class="small" style="width:42px;text-align:right">${total?Math.round(v/total*100):0}%</span><span class="small">${open?'▾':'▸'}</span></div>`;
+    if(open){ h += `<div class="blist">` + rows.filter(r=>r.cat===c.k).map(r=>`
+      <div class="bitem ${r.included?'':'off'}">
+        <div style="flex:1;min-width:0"><div class="bt">${esc(r.title)} ${r.paid?'<span class="tag lock">✅ จ่ายแล้ว</span>':''} ${r.planOff?`<span class="tag">ไม่อยู่ในแผน ${plan}</span>`:''}</div><div class="small">${esc(r.sub||'')}</div></div>
+        ${r.kind==='buffer'||r.kind==='hotel'?`<span class="bcost">${B$(r.cost)}</span>`:`<input class="bcost" type="number" inputmode="numeric" min="0" step="10" value="${r.cost}" data-bcost="${r.key}" aria-label="ราคาต่อคน">`}
+        <button class="tgl ${r.excluded?'':'on'}" data-act="btoggle" data-key="${r.key}" ${r.planOff?'disabled':''}>${r.excluded?'ตัดออก':'รวม'}</button>
+        ${r.custom?`<button class="ib" data-act="bdel" data-key="${r.key}" title="ลบ">🗑️</button>`:''}
+      </div>`).join('') + `<div class="pad" style="padding-top:6px"><button class="btn sm sec" data-act="badd" data-cat="${c.k}">＋ เพิ่มรายการงบใน “${c.n}”</button></div></div>`; }
+  });
+  h += `</div><div class="small" style="margin:6px 4px 16px">💱 ราคาประมาณเป็นบาท (1 ฿ ≈ ${RATE.VND_PER_THB} ₫, ${RATE.date}) · ตั๋วเครื่องบิน/รถไฟ SP7 เป็นราคาประมาณ แก้เป็นราคาที่จ่ายจริงได้ · ราคาที่พักหาร 4 คน · แก้ราคา/ตัดออกที่นี่จะแสดงในแท็บแผนเที่ยวทันทีและซิงก์ให้เพื่อน</div>`;
+  return h;
+}
+function setRow(key, fn){ // apply fn(target) to the item/line identified by key inside a state copy
+  return s => { if(key.startsWith('i:')){ const [,dId,iId]=key.split(':'); const d=s.days.find(d=>d.id===dId); const x=d&&d.items.find(i=>i.id===iId); if(x) fn(x,'item'); }
+    else if(key.startsWith('l:')){ s.budget=s.budget||JSON.parse(JSON.stringify(SEED_BUDGET)); const l=s.budget.lines.find(l=>l.id===key.slice(2)); if(l) fn(l,'line'); }
+    else { s.budget=s.budget||JSON.parse(JSON.stringify(SEED_BUDGET)); fn(s.budget, key); } };
+}
 const routeMode = JSON.parse(localStorage.getItem('sapaRouteMode')||'{}');
 const LETTERS = i => { let s=''; i++; while(i>0){ const r=(i-1)%26; s=String.fromCharCode(65+r)+s; i=Math.floor((i-1)/26); } return s; };
 const isLatLng = v => /^\s*-?\d{1,2}(\.\d+)?\s*,\s*-?\d{1,3}(\.\d+)?\s*$/.test(v||'');
@@ -404,13 +537,14 @@ function render(){
   $('#ppl').innerHTML = PEOPLE.map(p=>`<span class="chip">👤 ${esc(FULL[p])}</span>`).join('');
   $('#meSel').innerHTML = `<option value="">— เลือกชื่อ —</option>` + PEOPLE.map(p=>`<option ${p===me?'selected':''}>${p}</option>`).join('');
   document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===tab));
-  const f = {plan:renderPlan,hotel:renderHotels,return:renderReturn,info:renderInfo,set:renderSettings}[tab];
+  const f = {plan:renderPlan,budget:renderBudget,hotel:renderHotels,return:renderReturn,info:renderInfo,set:renderSettings}[tab];
   // keep focus-safe: don't re-render textarea being typed in
   $('#main').innerHTML = f();
   $('#foot').innerHTML = `ภาพ: Wikimedia Commons (ดูเครดิตในแท็บ 🎒 ข้อมูล)<br>แก้ไขล่าสุดโดย <b>${esc(state.updatedBy||'-')}</b> · ${new Date(state.updatedAt||Date.now()).toLocaleString('th-TH')} · rev ${state.rev}<br>ทริปไอดี: ${esc(KEY)}`;
 }
 function renderPlan(){
   let h = `<div class="alert"><b>⚠️ ขากลับ 31 ธ.ค. เวลาตึงมาก</b> ไฟลท์ VJ903 ออก 15:50 จากโหน่ยบ่าย แต่ซาปาอยู่ห่าง ~5–6 ชม. แนะนำ <b>แผน B</b>: นั่งรถไฟกลางคืนกลับฮานอยคืน 30 ธ.ค. (ต้องจองเพิ่ม) → <a href="#" data-go="return">ดูรายละเอียด/โหวต</a></div>`;
+  { const T = budgetTotals(); h += `<div class="alert green" style="cursor:pointer" data-act="gobudget">💰 งบตอนนี้ ~<b>${B$(T.total)}/คน</b> (4 คน ${B$(T.total*4)}) — แตะเพื่อดูโดนัทชาร์ต</div>`; }
   h += `<div class="small" style="margin:6px 4px">💱 ราคาทั้งหมดเป็นเงินบาทโดยประมาณ · อัตรา 1 ฿ ≈ ${RATE.VND_PER_THB} ₫ · 1 US$ ≈ ${RATE.THB_PER_USD} ฿ (อัปเดต ${RATE.date})</div>`;
   if(!me) h += `<div class="alert info">👋 เลือก “ฉันคือ” ด้านบนก่อน เพื่อให้เพื่อนเห็นว่าใครแก้ไข/โหวต</div>`;
   for(const d of state.days){
@@ -421,7 +555,7 @@ function renderPlan(){
     const R = routeOf(d); const letters = R.letters;
     d.items.forEach((x,i)=>{
       const map = safeUrl(x.map), link = safeUrl(x.link);
-      h += `<div class="item ${x.locked?'locked':''}">
+      h += `<div class="item ${x.locked?'locked':''} ${x.excluded?'excl':''}">
         <div class="t">${esc(x.time)}${letters[i]?`<br><span class="ltr" title="จุดในเส้นทาง">${letters[i]}</span>`:''}</div>
         ${thumbHtml(x, d.id)}
         <div class="b">
@@ -430,6 +564,7 @@ function renderPlan(){
           ${x.desc?`<div class="ds">${esc(toBaht(x.desc))}</div>`:''}
           <div class="meta">
             ${x.locked?'<span class="tag lock">🔒 จองแล้ว</span>':''}
+            ${x.excluded?'<span class="tag cut">✂️ ตัดออกจากงบ</span>':(costPP(x)?`<span class="tag bud" data-act="gobudget" data-cat="${x.cat||guessCat(x)}" style="cursor:pointer">งบ ${B$(costPP(x))}/คน${x.paid?' · จ่ายแล้ว':''}</span>`:'')}
             ${x.cost?`<span class="tag cost">💰 ${/ประมาณ/.test(x.cost)?'':'ประมาณ '}${esc(toBaht(x.cost))}</span>`:''}
             ${map?`<a href="${esc(map)}" target="_blank" rel="noopener">🗺️ แผนที่</a>`:''}
             ${link?`<a href="${esc(link)}" target="_blank" rel="noopener">🔗 ลิงก์</a>`:''}
@@ -553,7 +688,10 @@ function itemForm(dayId, item){
    <label>ชื่อกิจกรรม/สถานที่ *<input id="f_title" value="${esc(x.title)}"></label>
    <label>ชื่อท้องถิ่น/ที่อยู่ (EN/VN)<input id="f_local" value="${esc(x.local)}"></label>
    <label>รายละเอียด<textarea id="f_desc">${esc(x.desc)}</textarea></label>
-   <label>ค่าใช้จ่ายโดยประมาณ<input id="f_cost" value="${esc(x.cost)}"></label>
+   <label>ค่าใช้จ่ายโดยประมาณ (ข้อความ)<input id="f_cost" value="${esc(x.cost)}"></label>
+   <div class="row" style="gap:8px"><label style="flex:1">💰 งบต่อคน (บาท)<input id="f_thb" type="number" inputmode="numeric" min="0" step="10" value="${item && typeof item.costTHB==='number' ? item.costTHB : ''}" placeholder="${item?costPP(item):'เว้นว่าง = คำนวณจากข้อความ'}"></label>
+   <label style="flex:1">หมวดงบ<select id="f_cat">${CATS.map(c=>`<option value="${c.k}" ${(item?(item.cat||guessCat(item)):'activities')===c.k?'selected':''}>${c.e} ${c.n}</option>`).join('')}</select></label></div>
+   <label class="chk"><input type="checkbox" id="f_excl" ${item&&item.excluded?'checked':''}> ✂️ ตัดออกจากงบ</label>
    <label>ลิงก์ Google Maps (เว้นว่าง = สร้างจากชื่อให้อัตโนมัติ)<input id="f_map" value="${esc(x.map)}"></label>
    <label>ลิงก์อื่น ๆ<input id="f_link" value="${esc(x.link)}"></label>
    <label>📍 ตำแหน่งสำหรับเส้นทาง Google Maps (ชื่อสถานที่ + เมือง หรือ lat,lng)<input id="f_loc" value="${esc(curLoc)}" placeholder="เช่น Cat Cat Village, Sa Pa หรือ 22.3297,103.8336"></label>
@@ -569,7 +707,13 @@ function itemForm(dayId, item){
     const img = v('f_img'); if(img && !safeUrl(img)){ toast('ลิงก์รูปต้องขึ้นต้นด้วย https://'); return; }
     const sameImg = item && img === (item.img||'');
     const data = {time:v('f_time'),title,local:v('f_local'),desc:v('f_desc'),cost:v('f_cost'),map:v('f_map')||M(loc||v('f_local')||title),link:v('f_link'),loc,img,
-      imgCredit: sameImg ? (item.imgCredit||'') : '', imgPage: sameImg ? (item.imgPage||'') : (img ? img : '')};
+      imgCredit: sameImg ? (item.imgCredit||'') : '', imgPage: sameImg ? (item.imgPage||'') : (img ? img : ''),
+      cat: $('#f_cat').value, excluded: $('#f_excl').checked};
+    const thbRaw = v('f_thb'), oldThb = item && typeof item.costTHB==='number' ? String(item.costTHB) : '';
+    const textChanged = !item || data.cost !== (item.cost||'');
+    if(thbRaw !== '' && thbRaw !== oldThb) data.costTHB = Math.max(0, Math.round(+thbRaw)||0);      // number edited
+    else if(textChanged){ const pc = parseCostTHB(data.cost); data.costTHB = pc!==null ? pc : (thbRaw!==''? +thbRaw : 0); } // price text edited -> recompute
+    else data.costTHB = item && typeof item.costTHB==='number' ? item.costTHB : (parseCostTHB(data.cost)||0);
     closeModal();
     if(item){ const id=item.id; mutate(s=>{ const d=s.days.find(d=>d.id===dayId); const t=d&&d.items.find(i=>i.id===id); if(t) Object.assign(t,data); },'บันทึกแล้ว'); }
     else { const nid=uid(); mutate(s=>{ const d=s.days.find(d=>d.id===dayId); if(d && !d.items.some(i=>i.id===nid)) d.items.push({id:nid,locked:false,...data}); },'เพิ่มกิจกรรมแล้ว'); }
@@ -600,6 +744,13 @@ document.addEventListener('click', e => {
   if(a==='toggle'){ collapsed.has(dayId)?collapsed.delete(dayId):collapsed.add(dayId); render(); return; }
   if(a==='add') return itemForm(dayId);
   if(a==='photo'){ const d=state.days.find(d=>d.id===dayId); const x=d&&d.items.find(i=>i.id===b.dataset.id); if(x) photoBox(x); return; }
+  if(a==='gobudget'){ tab='budget'; if(b.dataset.cat) budgetOpen=b.dataset.cat; render(); scrollTo(0,0); return; }
+  if(a==='bcat'){ budgetOpen = budgetOpen===b.dataset.cat ? null : b.dataset.cat; render(); return; }
+  if(a==='btoggle'){ const key=b.dataset.key; const row=budgetRows().find(r=>r.key===key); if(!row) return; const nowEx=!row.excluded;
+    mutate(setRow(key,(t,k)=>{ if(k==='hotel') t.hotelExcluded=nowEx; else if(k==='buffer') t.buffer=!nowEx; else t.excluded=nowEx; }), nowEx?'ตัดออกจากงบแล้ว ✂️':'รวมกลับเข้างบแล้ว'); return; }
+  if(a==='bdel'){ const key=b.dataset.key; if(!confirm('ลบรายการงบนี้?')) return; mutate(s=>{ if(s.budget) s.budget.lines=s.budget.lines.filter(l=>'l:'+l.id!==key); },'ลบแล้ว'); return; }
+  if(a==='badd'){ const cat=b.dataset.cat; const t=prompt('ชื่อรายการงบ (เช่น ค่าเช่าเสื้อกันหนาว)'); if(!t) return; const c=+prompt('ราคาต่อคน (บาท)','0')||0; const id='c-'+uid();
+    mutate(s=>{ s.budget=s.budget||JSON.parse(JSON.stringify(SEED_BUDGET)); if(!s.budget.lines.some(l=>l.id===id)) s.budget.lines.push({id,title:t.trim(),cat,costTHB:Math.max(0,Math.round(c)),custom:true}); },'เพิ่มรายการงบแล้ว'); return; }
   if(a==='rmode'){ routeMode[dayId]=b.dataset.m; localStorage.setItem('sapaRouteMode',JSON.stringify(routeMode)); render(); return; }
   if(a==='edit'){ const d=state.days.find(d=>d.id===dayId); return itemForm(dayId, d.items.find(i=>i.id===b.dataset.id)); }
   if(a==='del'){ const id=b.dataset.id; const d=state.days.find(d=>d.id===dayId); const t=d.items.find(i=>i.id===id);
@@ -619,6 +770,9 @@ document.addEventListener('click', e => {
   if(a==='reset'){ if(!confirm('รีเซ็ตเป็นแผนแนะนำ? การแก้ไขและโหวตของทุกคนจะหายหมด')) return; const fresh=seed(); mutate(s=>{ const f=JSON.parse(JSON.stringify(fresh)); f.rev=s.rev; return f; },'รีเซ็ตแล้ว'); return; }
 });
 document.addEventListener('change', e => {
+  if(e.target.dataset.bcost){ const key=e.target.dataset.bcost, val=Math.max(0,Math.round(+e.target.value||0));
+    mutate(setRow(key,(t)=>{ t.costTHB=val; }),'อัปเดตราคาแล้ว'); return; }
+  if(e.target.dataset.bset){ const k=e.target.dataset.bset, val=e.target.value; mutate(s=>{ s.budget=s.budget||JSON.parse(JSON.stringify(SEED_BUDGET)); s.budget[k]=val; },'อัปเดตงบแล้ว'); return; }
   if(e.target.id==='meSel'){ me=e.target.value; localStorage.setItem('sapaMe',me); render(); if(me) toast('สวัสดี '+me+' 👋'); return; }
   if(e.target.dataset.notes){ const id=e.target.dataset.notes, val=e.target.value; const d=state.days.find(d=>d.id===id); if(d && d.notes===val) return;
     mutate(s=>{ const d=s.days.find(d=>d.id===id); if(d) d.notes=val; },'บันทึกโน้ตแล้ว'); return; }

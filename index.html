@@ -77,7 +77,18 @@ ul{padding-left:20px;margin:6px 0}
 .opt{border:2px solid var(--bd);border-radius:14px;padding:12px;margin:10px 0;background:#fff}
 .opt.rec{border-color:var(--g)}
 .badge{display:inline-block;background:var(--g);color:#fff;font-size:11px;border-radius:6px;padding:1px 7px;margin-left:4px}
-.collapsed .items,.collapsed .notes,.collapsed .dayfoot{display:none}
+.collapsed .items,.collapsed .notes,.collapsed .dayfoot,.collapsed .route{display:none}
+.thumb{width:64px;height:64px;flex:0 0 64px;border-radius:10px;overflow:hidden;background:#ecfdf5;display:flex;align-items:center;justify-content:center;font-size:28px;cursor:pointer;border:0;padding:0}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.ltr{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;border-radius:50%;background:#dc2626;color:#fff;font-size:12px;font-weight:700;margin-top:3px;padding:0 4px}
+.route{padding:10px 14px;background:#f0fdf4;border-top:1px solid var(--bd)}
+.route .stops{font-size:12.5px;color:var(--mu);margin-top:6px;line-height:1.7}
+.route a.rbtn{display:inline-block;background:#1a73e8;color:#fff;text-decoration:none;padding:8px 12px;border-radius:10px;font-weight:600;font-size:14px;margin:4px 6px 0 0}
+.mode button{border:1px solid var(--bd);background:#fff;border-radius:8px;padding:3px 8px;font-size:12.5px;cursor:pointer}
+.mode button.on{background:var(--g);color:#fff;border-color:var(--g)}
+.lb img{width:100%;border-radius:12px;display:block;background:#eee}
+.chk{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--mu);margin-top:4px}
+.chk input{width:auto}
 footer{text-align:center;color:var(--mu);font-size:12px;margin:24px 0}
 </style>
 </head>
@@ -118,76 +129,119 @@ const FULL = {Pitibhak:'Pitibhak Jongchalermchireuk',Sarit:'Sarit Boonsin',Jirat
 const M = q => 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q);
 let _n = 0; const uid = () => Date.now().toString(36) + (_n++).toString(36) + Math.random().toString(36).slice(2,6);
 
+/* ===================== PHOTOS (Wikimedia Commons, openly licensed) ===================== */
+const WM = {"dmk": {"img": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/41/Don_Mueang_International_Airport_Terminal_1.JPG/330px-Don_Mueang_International_Airport_Terminal_1.JPG", "page": "https://commons.wikimedia.org/wiki/File:Don_Mueang_International_Airport_Terminal_1.JPG", "credit": "Redakie · CC BY-SA 3.0"}, "nb": {"img": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/38/Noi_Bai_International_Airport_Terminal_2_Night_View.JPG/330px-Noi_Bai_International_Airport_Terminal_2_Night_View.JPG", "page": "https://commons.wikimedia.org/wiki/File:Noi_Bai_International_Airport_Terminal_2_Night_View.JPG", "credit": "Christakis Mina · CC BY-SA 4.0"}, "gahn": {"img": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/60/Ga_Ha_Noi_Oct_2010.jpg/330px-Ga_Ha_Noi_Oct_2010.jpg", "page": "https://commons.wikimedia.org/wiki/File:Ga_Ha_Noi_Oct_2010.jpg", "credit": "calflier001 · CC BY-SA 2.0"}, "buncha": {"img": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6d/President_Barack_Obama_with_Anthony_Bourdain_at_B%C3%BAn_cha_Huong_Lien_Restaurant_in_Hanoi%2C_Vietnam.jpg/330px-President_Barack_Obama_with_Anthony_Bourdain_at_B%C3%BAn_cha_Huong_Lien_Restaurant_in_Hanoi%2C_Vietnam.jpg", "page": "https://commons.wikimedia.org/wiki/File:President_Barack_Obama_with_Anthony_Bourdain_at_B%C3%BAn_cha_Huong_Lien_Restaurant_in_Hanoi,_Vietnam.jpg", "credit": "The White House (Pete Souza) · Public domain"}, "vanmieu": {"img": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a6/Khue_Van_Cac_2024.jpg/330px-Khue_Van_Cac_2024.jpg", "page": "https://commons.wikimedia.org/wiki/File:Khue_Van_Cac_2024.jpg", "credit": "Sai Gon Dep Lam · CC BY 4.0"}, "ngocson": {"img": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c8/Huc_Bridge.jpg/330px-Huc_Bridge.jpg", "page": "https://commons.wikimedia.org/wiki/File:Huc_Bridge.jpg", "credit": "David Stanley · CC BY 2.0"}, "egg": {"img": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/54/Egg_Coffee_%286923068614%29.jpg/330px-Egg_Coffee_%286923068614%29.jpg", "page": "https://commons.wikimedia.org/wiki/File:Egg_Coffee_(6923068614).jpg", "credit": "David McKelvey from Brisbane, Australia · CC BY 2.0"}, "cathedral": {"img": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/86/St_Joseph_Cathedral%2C_Hanoi_2023.jpg/330px-St_Joseph_Cathedral%2C_Hanoi_2023.jpg", "page": "https://commons.wikimedia.org/wiki/File:St_Joseph_Cathedral,_Hanoi_2023.jpg", "credit": "Greenknight dv · CC BY-SA 4.0"}, "trainst": {"img": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/70/Train_street_in_Hanoi.jpg/330px-Train_street_in_Hanoi.jpg", "page": "https://commons.wikimedia.org/wiki/File:Train_street_in_Hanoi.jpg", "credit": "Kris Martyn · CC BY-SA 4.0"}, "pho": {"img": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/65/Beef_noodle_soup_%28Ph%E1%BB%9F_b%C3%B2%29_-_Pho_Hanoi_Authentic_2024-12-01.jpg/330px-Beef_noodle_soup_%28Ph%E1%BB%9F_b%C3%B2%29_-_Pho_Hanoi_Authentic_2024-12-01.jpg", "page": "https://commons.wikimedia.org/wiki/File:Beef_noodle_soup_(Ph%E1%BB%9F_b%C3%B2)_-_Pho_Hanoi_Authentic_2024-12-01.jpg", "credit": "Andy Li · CC0"}, "laocai": {"img": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7f/Lao_Cai_Railway_Station_%28Jan_4%2C_2019%29.jpg/330px-Lao_Cai_Railway_Station_%28Jan_4%2C_2019%29.jpg", "page": "https://commons.wikimedia.org/wiki/File:Lao_Cai_Railway_Station_(Jan_4,_2019).jpg", "credit": "Yhxc57082 · CC BY-SA 4.0"}, "fansipan": {"img": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ac/Fansipan_Cable_Car.jpg/330px-Fansipan_Cable_Car.jpg", "page": "https://commons.wikimedia.org/wiki/File:Fansipan_Cable_Car.jpg", "credit": "Christophe95 · CC BY-SA 4.0"}, "church": {"img": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f4/Nh%C3%A0_th%E1%BB%9D_%C4%91%C3%A1_Sa_Pa.jpg/330px-Nh%C3%A0_th%E1%BB%9D_%C4%91%C3%A1_Sa_Pa.jpg", "page": "https://commons.wikimedia.org/wiki/File:Nh%C3%A0_th%E1%BB%9D_%C4%91%C3%A1_Sa_Pa.jpg", "credit": "Bùi Thụy Đào Nguyên · CC BY-SA 3.0"}, "catcat": {"img": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a6/Cat_Cat_Waterfalls%2C_Sa_Pa%2C_Vietnam%2C_20240126_1230_3628.jpg/330px-Cat_Cat_Waterfalls%2C_Sa_Pa%2C_Vietnam%2C_20240126_1230_3628.jpg", "page": "https://commons.wikimedia.org/wiki/File:Cat_Cat_Waterfalls,_Sa_Pa,_Vietnam,_20240126_1230_3628.jpg", "credit": "Jakub Hałun · CC BY 4.0"}, "sapatown": {"img": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8f/Sapa_%28228139587%29.jpeg/330px-Sapa_%28228139587%29.jpeg", "page": "https://commons.wikimedia.org/wiki/File:Sapa_(228139587).jpeg", "credit": "Soibien032016 · CC0"}, "laochai": {"img": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/54/M%C6%B0%E1%BB%9Dng_Hoa_Valley_06.jpg/330px-M%C6%B0%E1%BB%9Dng_Hoa_Valley_06.jpg", "page": "https://commons.wikimedia.org/wiki/File:M%C6%B0%E1%BB%9Dng_Hoa_Valley_06.jpg", "credit": "Christophe95 · CC BY-SA 4.0"}, "tavan": {"img": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8f/Ta_Van_Muong_Ha_vallei_%2856687%29.jpg/330px-Ta_Van_Muong_Ha_vallei_%2856687%29.jpg", "page": "https://commons.wikimedia.org/wiki/File:Ta_Van_Muong_Ha_vallei_(56687).jpg", "credit": "Andre Hospers · CC BY 4.0"}, "oquyho": {"img": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/19/O_Quy_Ho_pass.jpg/330px-O_Quy_Ho_pass.jpg", "page": "https://commons.wikimedia.org/wiki/File:O_Quy_Ho_pass.jpg", "credit": "Kiếm Anh · CC BY-SA 4.0"}, "mausoleum": {"img": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/dd/Hanoi_Vietnam_Mausoleum-of-Ho-Chi-Minh-01.jpg/330px-Hanoi_Vietnam_Mausoleum-of-Ho-Chi-Minh-01.jpg", "page": "https://commons.wikimedia.org/wiki/File:Hanoi_Vietnam_Mausoleum-of-Ho-Chi-Minh-01.jpg", "credit": "CEphoto, Uwe Aranas · CC BY-SA 3.0"}, "oldquarter": {"img": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e6/H%C3%A0ng_B%E1%BA%A1c_and_H%C3%A0ng_B%E1%BB%93_streets.jpg/330px-H%C3%A0ng_B%E1%BA%A1c_and_H%C3%A0ng_B%E1%BB%93_streets.jpg", "page": "https://commons.wikimedia.org/wiki/File:H%C3%A0ng_B%E1%BA%A1c_and_H%C3%A0ng_B%E1%BB%93_streets.jpg", "credit": "Christophe95 · CC BY-SA 4.0"}};
+const SEED_META = {"d1": {"04:50": ["", "dmk"], "08:45": ["Noi Bai International Airport Terminal 2, Hanoi", "nb"], "10:30": ["Ga Hà Nội, 120 Lê Duẩn, Hà Nội", "gahn"], "11:15": ["Bún Chả Hương Liên, 24 Lê Văn Hưu, Hà Nội", "buncha"], "12:45": ["Văn Miếu - Quốc Tử Giám, Hà Nội", "vanmieu"], "14:15": ["Đền Ngọc Sơn, Hà Nội", "ngocson"], "15:15": ["Cafe Giảng, 39 Nguyễn Hữu Huân, Hà Nội", "egg"], "16:00": ["Nhà Thờ Lớn Hà Nội", "cathedral"], "17:30": ["Hanoi Train Street, Phùng Hưng, Hà Nội", "trainst"], "18:45": ["Phở Gia Truyền Bát Đàn, 49 Bát Đàn, Hà Nội", "pho"], "21:45": ["Ga Hà Nội, Trần Quý Cáp, Hà Nội", "gahn"], "22:40": ["", "gahn"]}, "d2": {"06:27": ["Ga Lào Cai, Lào Cai", "laocai"], "06:40": ["Sapa Fansipan View House, 64 Fansipan, Sa Pa", ""], "07:45": ["Mam Restaurant & Coffee, 27 Hoàng Liên, Sa Pa", ""], "08:30": ["Fansipan Legend Cable Car Station, Sa Pa", "fansipan"], "12:00": ["Nhà Thờ Đá Sa Pa", "church"], "14:00": ["Sapa Fansipan View House, 64 Fansipan, Sa Pa", ""], "14:45": ["Bản Cát Cát, Sa Pa", "catcat"], "17:30": ["Sapa Nature View Restaurant & Sky Bar, 061 Fansipan, Sa Pa", ""], "19:30": ["Chợ đêm Sa Pa", "sapatown"]}, "d3": {"07:30": ["Sapa Fansipan View House, 64 Fansipan, Sa Pa", ""], "08:30": ["Lao Chải, Sa Pa", "laochai"], "12:30": ["Tả Van, Sa Pa", "tavan"], "14:30": ["Moana Sapa", ""], "16:00": ["Cổng Trời Ô Quy Hồ", "oquyho"], "18:30": ["Quảng trường Sa Pa", "sapatown"], "20:15": ["Sapa Fansipan View House, 64 Fansipan, Sa Pa", ""], "21:50": ["Ga Lào Cai, Lào Cai", "laocai"]}, "d4": {"05:40": ["Ga Hà Nội, Trần Quý Cáp, Hà Nội", "gahn"], "06:15": ["Phở Thìn, 13 Lò Đúc, Hà Nội", "pho"], "07:30": ["Mango Apartment, 48 Phan Bội Châu, Hà Nội", ""], "09:00": ["Lăng Chủ tịch Hồ Chí Minh, Hà Nội", "mausoleum"], "11:00": ["Bánh Mì 25, 25 Hàng Cá, Hà Nội", "oldquarter"], "12:00": ["Noi Bai International Airport Terminal 2, Hanoi", "nb"], "13:15": ["", "nb"]}};
 /* ===================== SEED (แผนแนะนำ) ===================== */
 function seed(){
   const it = (time,title,local,desc,cost,map,link,locked) => ({id:uid(),time,title,local:local||'',desc:desc||'',cost:cost||'',map:map||'',link:link||'',locked:!!locked});
-  return {
-    v:1, rev:1, updatedAt:Date.now(), updatedBy:'แผนแนะนำ',
+  const s = {
+    v:3, rev:1, updatedAt:Date.now(), updatedBy:'แผนแนะนำ',
     days:[
       {id:'d1', date:'จ. 28 ธ.ค. 2026', title:'วันที่ 1 · กรุงเทพ → ฮานอย (เที่ยวฮานอยทั้งวัน + รถไฟกลางคืน)', notes:'กระเป๋าถือขึ้นเครื่องอย่างเดียว 7 กก./คน → ฝากล็อกเกอร์ที่สถานีรถไฟได้ เดินเที่ยวตัวเบา', items:[
         it('04:50','ถึงสนามบินดอนเมือง อาคาร 1','Don Mueang Airport T1','ไฟลท์ต่างประเทศ เผื่อเวลา ~2 ชม. • กระเป๋าถือรวมของใช้ส่วนตัวไม่เกิน 7 กก. (ไม่มีโหลด) • ของเหลวไม่เกิน 100 มล./ชิ้น','',M('Don Mueang International Airport Terminal 1')),
         it('06:50','✈️ Thai AirAsia FD642 · DMK T1 06:50 → HAN T2 08:45','Bangkok Don Mueang → Hà Nội Nội Bài','เที่ยวบินขาไป (จองแล้ว) • Carry-on 7 กก. • เวลาเวียดนาม = เวลาไทย','', '', '', true),
-        it('08:45','ผ่าน ตม. + ซื้อซิม/eSIM + แลกเงินดอง','Nội Bài T2','คนไทยเข้าเวียดนามได้ 30 วันไม่ต้องใช้วีซ่า • เรียก Grab ไปสถานีรถไฟฮานอย (~45–60 นาที, ~300–450k VND/คัน ประมาณ) หรือรถบัส 86 (~45k VND/คน ประมาณ, จอดใกล้สถานีรถไฟ)','~45k VND/คน (บัส 86)',M('Noi Bai International Airport Terminal 2')),
-        it('10:30','ฝากกระเป๋าที่สถานีรถไฟฮานอย','Ga Hà Nội · 120 Lê Duẩn','ตู้ล็อกเกอร์อัตโนมัติ 24 ชม. ในโถง Gate A/B: 50,000 VND/4 ชม. (สูงสุด 300k/24 ชม.) จ่ายเงินสดแบงก์ย่อยเท่านั้น • ทางเลือก: จอง day-use ที่ Mango Apartment ฝั่งตรงข้ามสถานี ไว้อาบน้ำก่อนขึ้นรถไฟ (ดูแท็บที่พัก)','50k VND/4 ชม.',M('Ga Hà Nội 120 Lê Duẩn')),
-        it('11:15','มื้อกลางวัน: บุ๋นจ่า Bún Chả Hương Liên','Bún Chả Hương Liên · 24 Lê Văn Hưu','ร้านบุ๋นจ่าที่โอบามาเคยมากิน สั่ง “Combo Obama” (บุ๋นจ่า + เนมฮาย + เบียร์)','~60–120k VND/คน',M('Bún Chả Hương Liên 24 Lê Văn Hưu Hà Nội')),
-        it('12:45','วัดวรรณกรรม (มหาวิทยาลัยแห่งแรกของเวียดนาม)','Văn Miếu – Quốc Tử Giám','อาคารโบราณ สวนสวย ถ่ายรูปสวย ~1 ชม.','~70k VND/คน (ประมาณ)',M('Văn Miếu Quốc Tử Giám')),
-        it('14:15','ทะเลสาบคืนดาบ + สะพานแดง + วัดหง็อกเซิน','Hồ Hoàn Kiếm · Cầu Thê Húc · Đền Ngọc Sơn','เดินรอบทะเลสาบใจกลางเมือง','วัด ~50k VND',M('Đền Ngọc Sơn Hồ Hoàn Kiếm')),
-        it('15:15','กาแฟไข่ต้นตำรับ ☕','Cà Phê Giảng · 39 Nguyễn Hữu Huân','ต้นตำรับ egg coffee ของฮานอย (ลองแบบร้อนในถ้วยแช่น้ำร้อน)','~35–50k VND',M('Cafe Giảng 39 Nguyễn Hữu Huân Hà Nội')),
+        it('08:45','ผ่าน ตม. + ซื้อซิม/eSIM + แลกเงินดอง','Nội Bài T2','คนไทยเข้าเวียดนามได้ 30 วันไม่ต้องใช้วีซ่า • เรียก Grab ไปสถานีรถไฟฮานอย (~45–60 นาที, ~฿400–600/คัน ประมาณ) หรือรถบัส 86 (~฿60/คน ประมาณ, จอดใกล้สถานีรถไฟ)','~฿60/คน (บัส 86)',M('Noi Bai International Airport Terminal 2')),
+        it('10:30','ฝากกระเป๋าที่สถานีรถไฟฮานอย','Ga Hà Nội · 120 Lê Duẩn','ตู้ล็อกเกอร์อัตโนมัติ 24 ชม. ในโถง Gate A/B: ~฿65/4 ชม. (สูงสุด ~฿400/24 ชม.) จ่ายเงินสดแบงก์ย่อยเท่านั้น • ทางเลือก: จอง day-use ที่ Mango Apartment ฝั่งตรงข้ามสถานี ไว้อาบน้ำก่อนขึ้นรถไฟ (ดูแท็บที่พัก)','~฿65/4 ชม.',M('Ga Hà Nội 120 Lê Duẩn')),
+        it('11:15','มื้อกลางวัน: บุ๋นจ่า Bún Chả Hương Liên','Bún Chả Hương Liên · 24 Lê Văn Hưu','ร้านบุ๋นจ่าที่โอบามาเคยมากิน สั่ง “Combo Obama” (บุ๋นจ่า + เนมฮาย + เบียร์)','~฿80–160/คน',M('Bún Chả Hương Liên 24 Lê Văn Hưu Hà Nội')),
+        it('12:45','วัดวรรณกรรม (มหาวิทยาลัยแห่งแรกของเวียดนาม)','Văn Miếu – Quốc Tử Giám','อาคารโบราณ สวนสวย ถ่ายรูปสวย ~1 ชม.','~฿90/คน (ประมาณ)',M('Văn Miếu Quốc Tử Giám')),
+        it('14:15','ทะเลสาบคืนดาบ + สะพานแดง + วัดหง็อกเซิน','Hồ Hoàn Kiếm · Cầu Thê Húc · Đền Ngọc Sơn','เดินรอบทะเลสาบใจกลางเมือง','วัด ~฿65',M('Đền Ngọc Sơn Hồ Hoàn Kiếm')),
+        it('15:15','กาแฟไข่ต้นตำรับ ☕','Cà Phê Giảng · 39 Nguyễn Hữu Huân','ต้นตำรับ egg coffee ของฮานอย (ลองแบบร้อนในถ้วยแช่น้ำร้อน)','~฿45–65',M('Cafe Giảng 39 Nguyễn Hữu Huân Hà Nội')),
         it('16:00','เดินย่านเมืองเก่า 36 ถนน + โบสถ์เซนต์โจเซฟ','Phố Cổ Hà Nội · Nhà Thờ Lớn','ช้อปเสื้อกันหนาว/ถุงมือราคาถูกสำหรับซาปาได้ที่ย่าน Hàng Bồ/Hàng Gai • ตัวเลือก: โชว์หุ่นกระบอกน้ำ Thăng Long (เช็ครอบ)','',M('St. Joseph Cathedral Hanoi')),
-        it('17:30','ถนนรถไฟ Train Street 🚂','Phố Đường Tàu (Phùng Hưng / Trần Phú)','นั่งร้านกาแฟริมราง รอรถไฟวิ่งผ่าน • บางช่วงเจ้าหน้าที่จำกัดการเข้า ต้องเข้าผ่านร้านกาแฟ ถามเวลารถไฟผ่านจากร้าน • ระวังความปลอดภัย','เครื่องดื่ม ~50k VND',M('Hanoi Train Street Phùng Hưng')),
-        it('18:45','มื้อเย็น: เฝอเนื้อ 🍜','Phở Gia Truyền Bát Đàn · 49 Bát Đàn','เฝอเนื้อขึ้นชื่อ ต่อคิวซื้อเอง (เช็คเวลาเปิดรอบเย็น) • สำรอง: Phở Thìn Lò Đúc หรือเบียร์โหย่ที่ถนน Tạ Hiện','~60–80k VND',M('Phở Gia Truyền Bát Đàn 49 Bát Đàn')),
+        it('17:30','ถนนรถไฟ Train Street 🚂','Phố Đường Tàu (Phùng Hưng / Trần Phú)','นั่งร้านกาแฟริมราง รอรถไฟวิ่งผ่าน • บางช่วงเจ้าหน้าที่จำกัดการเข้า ต้องเข้าผ่านร้านกาแฟ ถามเวลารถไฟผ่านจากร้าน • ระวังความปลอดภัย','เครื่องดื่ม ~฿65',M('Hanoi Train Street Phùng Hưng')),
+        it('18:45','มื้อเย็น: เฝอเนื้อ 🍜','Phở Gia Truyền Bát Đàn · 49 Bát Đàn','เฝอเนื้อขึ้นชื่อ ต่อคิวซื้อเอง (เช็คเวลาเปิดรอบเย็น) • สำรอง: Phở Thìn Lò Đúc หรือเบียร์โหย่ที่ถนน Tạ Hiện','~฿80–100',M('Phở Gia Truyền Bát Đàn 49 Bát Đàn')),
         it('20:30','ซื้อเสบียง/น้ำขึ้นรถไฟ + อาบน้ำ + รับกระเป๋า','','ร้านสะดวกซื้อแถว Lê Duẩn • ถ้าจอง day-use ไว้ อาบน้ำเปลี่ยนชุดให้อุ่นก่อนขึ้นรถไฟ','',''),
         it('21:45','ไปถึงสถานีฮานอย ฝั่ง Gate B (ถ.Trần Quý Cáp)','Ga Hà Nội – cổng Trần Quý Cáp','รถไฟสายเหนือ (ไปลาวกาย) ขึ้นฝั่ง Trần Quý Cáp • ไปถึงก่อนออกอย่างน้อย 30–45 นาที','',M('Ga Hà Nội Trần Quý Cáp')),
         it('22:40','🚆 รถไฟนอน SP7 · ฮานอย 22:40 → ลาวกาย ~06:27','Hà Nội → Lào Cai','จองแล้ว • ตู้ (Coach) 3 · ห้องนอน 4 เตียง · Pitibhak = เตียง 19 (เตียงบน) • เพื่อนๆ กรุณาเช็คหมายเลขเตียงในตั๋วของตัวเอง','', '', '', true)
       ]},
       {id:'d2', date:'อ. 29 ธ.ค. 2026', title:'วันที่ 2 · ลาวกาย → ซาปา: ฟานซีปัน + หมู่บ้านกัตกัต', notes:'ปรับจากอินโฟกราฟิกเดิม: รถไฟ SP7 ถึงลาวกาย 06:27 + นั่งรถขึ้นซาปา ~1 ชม. จึงขยับอาหารเช้า 07:00 → ~07:45 และฟานซีปัน 08:00 → ~08:30 • ฟานซีปันใช้เวลา 3–4 ชม. จึงย้ายหมู่บ้านกัตกัต (เดิม 09:00) ไปช่วงบ่ายหลังเช็คอิน (ที่พักเดินไปกัตกัตได้ ~10–15 นาที) • ช่วง 12:00 / 14:00 / 17:30 คงตามเดิม', items:[
         it('06:27','🚆 SP7 ถึงสถานีลาวกาย','Ga Lào Cai','เวลาตามตาราง (อาจคลาดเคลื่อน)','', M('Ga Lào Cai'), '', true),
-        it('06:40','นั่งรถขึ้นซาปา (~34 กม. / ~1 ชม.)','Lào Cai → Sa Pa','รถบัส/รถตู้หน้าสถานี (~30–60k VND/คน ประมาณ) หรือ Grab/แท็กซี่/รถตู้เหมา 4 คน (~500–700k VND/คัน ประมาณ) • แวะฝากกระเป๋าที่ Sapa Fansipan View House (64 Fansipan) ก่อน','~30–60k VND/คน',M('Sapa Fansipan View House 64 Fansipan Sa Pa')),
+        it('06:40','นั่งรถขึ้นซาปา (~34 กม. / ~1 ชม.)','Lào Cai → Sa Pa','รถบัส/รถตู้หน้าสถานี (~฿40–80/คน ประมาณ) หรือ Grab/แท็กซี่/รถตู้เหมา 4 คน (~฿650–900/คัน ประมาณ) • แวะฝากกระเป๋าที่ Sapa Fansipan View House (64 Fansipan) ก่อน','~฿40–80/คน',M('Sapa Fansipan View House 64 Fansipan Sa Pa')),
         it('07:45','อาหารเช้า/กาแฟ (เดิม 07:00)','VTK Homestay Viettrekking Sapa (33 Hoàng Liên) หรือ Mam Restaurant & Coffee (27 Hoàng Liên)','Mam Restaurant & Coffee เปิด 07:00–22:00 • ทั้งสองร้านอยู่ถนน Hoàng Liên ใกล้กัน','',M('Mam Restaurant & Coffee 27 Hoàng Liên Sa Pa')),
-        it('08:30','🚡 กระเช้าฟานซีปัน ขึ้นยอด 3,143 ม. “หลังคาแห่งอินโดจีน” (เดิม 08:00)','Fansipan Legend · Sun Plaza / ga Hoàng Liên','Must-see! แหล่งเดิมข้ามไปเพราะหมอกและฝน → เช็คพยากรณ์อากาศ/ประกาศ Sun World คืนก่อน (ปิดได้ถ้าลมแรง) • บนยอดอาจติดลบ ใส่ชุดกันหนาวเต็มที่ • ใช้เวลารวม ~3–4 ชม. • ราคากระเช้าไป-กลับ ~850k VND/ผู้ใหญ่ (ราคา 2026; รถไฟ Mường Hoa/รางขึ้นยอดคิดแยก)','~850k VND/คน',M('Fansipan Legend Cable Car Station'),'https://sunworldfansipan.com/gia-ve/'),
+        it('08:30','🚡 กระเช้าฟานซีปัน ขึ้นยอด 3,143 ม. “หลังคาแห่งอินโดจีน” (เดิม 08:00)','Fansipan Legend · Sun Plaza / ga Hoàng Liên','Must-see! แหล่งเดิมข้ามไปเพราะหมอกและฝน → เช็คพยากรณ์อากาศ/ประกาศ Sun World คืนก่อน (ปิดได้ถ้าลมแรง) • บนยอดอาจติดลบ ใส่ชุดกันหนาวเต็มที่ • ใช้เวลารวม ~3–4 ชม. • ราคากระเช้าไป-กลับ ~฿1,100/ผู้ใหญ่ (ราคา 2026; รถไฟ Mường Hoa/รางขึ้นยอดคิดแยก)','~฿1,100/คน',M('Fansipan Legend Cable Car Station'),'https://sunworldfansipan.com/gia-ve/'),
         it('12:00','เดินเล่นถ่ายรูป: ลานกลางเมือง · โบสถ์หิน · ทะเลสาบซาปา + มื้อกลางวัน','Quảng trường Sa Pa · Nhà Thờ Đá Sa Pa · Hồ Sa Pa','ทั้งสามจุดอยู่ใกล้กันในตัวเมือง เดินถึงได้','',M('Nhà Thờ Đá Sa Pa')),
         it('14:00','เช็คอินที่พัก: Sapa Fansipan View House','64 Fansipan (Fan Si Păng), Sa Pa','เช็คอิน 14:00 • ห้อง Family สำหรับ 4 คน (2 เตียงคิงไซส์) วิวภูเขา มีระเบียง','',M('Sapa Fansipan View House 64 Fansipan Sa Pa')),
-        it('14:45','หมู่บ้านกัตกัต (เดิม 09:00)','Bản Cát Cát','หมู่บ้านชาวม้งดำ น้ำตก สะพาน บ้านไม้ เช่าชุดชนเผ่าถ่ายรูป • ตั๋ว 150,000 VND • ขาลงเดินสบาย ขากลับเป็นทางขึ้นชัน มีมอเตอร์ไซค์รับจ้าง','150k VND/คน',M('Bản Cát Cát Sa Pa')),
+        it('14:45','หมู่บ้านกัตกัต (เดิม 09:00)','Bản Cát Cát','หมู่บ้านชาวม้งดำ น้ำตก สะพาน บ้านไม้ เช่าชุดชนเผ่าถ่ายรูป • ตั๋ว ~฿200/คน • ขาลงเดินสบาย ขากลับเป็นทางขึ้นชัน มีมอเตอร์ไซค์รับจ้าง','~฿200/คน',M('Bản Cát Cát Sa Pa')),
         it('17:30','มื้อเย็น + วิวกลางคืน','Sapa Nature View Restaurant & Sky Bar · 061 Fansipan','เปิด 07:00–22:30 • อยู่ถนนเดียวกับที่พัก','',M('Sapa Nature View Restaurant & Sky Bar 061 Fansipan Sa Pa')),
         it('19:30','(ตัวเลือก) ตลาดกลางคืน/ปิ้งย่างริมทาง','Chợ đêm Sa Pa','ไข่ปิ้ง หมูเสียบไม้ ข้าวหลามย่าง ไวน์ข้าว • อากาศหนาวมาก','',M('Chợ đêm Sa Pa'))
       ]},
       {id:'d3', date:'พ. 30 ธ.ค. 2026', title:'วันที่ 3 · หุบเขาเหมื่องฮวา เทรค Lao Chải–Tả Van + Moana + Ô Quy Hồ', notes:'ถ้าเลือกแผนกลับ B (แนะนำ) → เช็คเอาท์เช้านี้ ฝากกระเป๋าไว้ที่โรงแรม แล้วขึ้นรถไฟกลางคืนกลับฮานอย (ต้องจองตั๋วเพิ่ม) • ถ้าเลือกแผน A → นอนซาปาอีกคืน', items:[
         it('07:30','อาหารเช้า + เช็คเอาท์/ฝากกระเป๋า (ถ้าแผน B)','','','',''),
-        it('08:30','เดินเทรคหุบเขานาขั้นบันได Lao Chải → Tả Van','Thung lũng Mường Hoa','~8–12 กม. ส่วนใหญ่ทางลง ทางเป็นโคลนได้ ใส่รองเท้ากันลื่น • จ้างไกด์ท้องถิ่นชาวม้ง/ทัวร์ครึ่งวันจากที่พักได้ • ค่าเข้าเขตหมู่บ้าน ~75k VND/คน (ประมาณ) • เดือน ธ.ค. นาไม่เขียว แต่วิวหุบเขาสวย','~75k VND/คน + ไกด์',M('Lao Chải Sa Pa')),
+        it('08:30','เดินเทรคหุบเขานาขั้นบันได Lao Chải → Tả Van','Thung lũng Mường Hoa','~8–12 กม. ส่วนใหญ่ทางลง ทางเป็นโคลนได้ ใส่รองเท้ากันลื่น • จ้างไกด์ท้องถิ่นชาวม้ง/ทัวร์ครึ่งวันจากที่พักได้ • ค่าเข้าเขตหมู่บ้าน ~฿100/คน (ประมาณ) • เดือน ธ.ค. นาไม่เขียว แต่วิวหุบเขาสวย','~฿100/คน + ไกด์',M('Lao Chải Sa Pa')),
         it('12:30','มื้อกลางวันที่หมู่บ้าน Tả Van','Tả Van','คาเฟ่/โฮมสเตย์ริมนา','',M('Tả Van Sa Pa')),
         it('13:30','แท็กซี่/Grab กลับซาปา (~20–30 นาที)','','','',''),
-        it('14:30','Moana Sapa (ประตูสวรรค์สไตล์บาหลี จุดถ่ายรูป)','Moana Sapa','เปิด 07:00–17:00 • ตั๋ว ~80–180k VND ตามแพ็กเกจ','~80–180k VND',M('Moana Sapa')),
+        it('14:30','Moana Sapa (ประตูสวรรค์สไตล์บาหลี จุดถ่ายรูป)','Moana Sapa','เปิด 07:00–17:00 • ตั๋ว ~฿100–240 ตามแพ็กเกจ','~฿100–240',M('Moana Sapa')),
         it('16:00','ช่องเขา Ô Quy Hồ / ประตูสวรรค์ ชมพระอาทิตย์ตก','Đèo Ô Quy Hồ · Cổng Trời','หนึ่งใน 4 ช่องเขาที่สวยที่สุดของเวียดนาม พระอาทิตย์ตก ~17:20 • หมอกลงบ่อย ถ้าหมอกจัดให้ข้าม • เหมารถไป-กลับ','',M('Cổng Trời Ô Quy Hồ')),
-        it('18:30','มื้อเย็น: สุกี้ปลาแซลมอน/ปลาสเตอร์เจียน','Lẩu cá hồi Sa Pa','เมนูดังของซาปา อุ่นๆ เหมาะกับอากาศหนาว','~200–300k VND/คน',M('lẩu cá hồi Sa Pa')),
-        it('20:15','(แผน B) รับกระเป๋า → เหมารถไปสถานีลาวกาย (~1 ชม.)','','','~500–700k VND/คัน',M('Ga Lào Cai')),
-        it('21:50','(แผน B) 🚆 รถไฟนอน SP4 ลาวกาย 21:50 → ฮานอย 05:40 — ยังไม่ได้จอง!','Lào Cai → Hà Nội','ต้องจองตั๋วเพิ่ม (dsvn.vn / Baolau / 12Go) ช่วงปีใหม่ที่นั่งเต็มเร็ว • สำรอง: SP16 21:25 → 05:15 หรือรถบัสนอน (cabin bus) Sapa → Hanoi รอบ ~21:30–22:00','~1.0–1.2M VND/คน (ห้อง 4 เตียง)',M('Ga Lào Cai'),'https://www.baolau.com/en/s/lao-cai/hanoi/')
+        it('18:30','มื้อเย็น: สุกี้ปลาแซลมอน/ปลาสเตอร์เจียน','Lẩu cá hồi Sa Pa','เมนูดังของซาปา อุ่นๆ เหมาะกับอากาศหนาว','~฿260–390/คน',M('lẩu cá hồi Sa Pa')),
+        it('20:15','(แผน B) รับกระเป๋า → เหมารถไปสถานีลาวกาย (~1 ชม.)','','','~฿650–900/คัน',M('Ga Lào Cai')),
+        it('21:50','(แผน B) 🚆 รถไฟนอน SP4 ลาวกาย 21:50 → ฮานอย 05:40 — ยังไม่ได้จอง!','Lào Cai → Hà Nội','ต้องจองตั๋วเพิ่ม (dsvn.vn / Baolau / 12Go) ช่วงปีใหม่ที่นั่งเต็มเร็ว • สำรอง: SP16 21:25 → 05:15 หรือรถบัสนอน (cabin bus) Sapa → Hanoi รอบ ~21:30–22:00','~฿1,300–1,600/คน (ห้อง 4 เตียง)',M('Ga Lào Cai'),'https://www.baolau.com/en/s/lao-cai/hanoi/')
       ]},
       {id:'d4', date:'พฤ. 31 ธ.ค. 2026', title:'วันที่ 4 · กลับบ้าน (ไฟลท์ 15:50 จากโหน่ยบ่าย)', notes:'⚠️ ต้องถึงสนามบิน T2 ไม่เกิน ~13:00–13:15 (เคาน์เตอร์ VietJet ปิด ~50–60 นาทีก่อนบิน) • วันส่งท้ายปี รถติดและค่ารถอาจแพงขึ้น • ด้านล่างคือแผน B (แนะนำ) ดูแผน A ในแท็บ “ขากลับ”', items:[
         it('05:40','(แผน B) ถึงสถานีรถไฟฮานอย','Ga Hà Nội','','',M('Ga Hà Nội')),
-        it('06:15','อาหารเช้า: เฝอ','Phở Gia Truyền Bát Đàn / Phở Thìn','','~60–80k VND',M('Phở Thìn 13 Lò Đúc')),
+        it('06:15','อาหารเช้า: เฝอ','Phở Gia Truyền Bát Đàn / Phở Thìn','','~฿80–100',M('Phở Thìn 13 Lò Đúc')),
         it('07:30','อาบน้ำ/พักที่ day-use room','Mango Apartment (ตรงข้ามสถานี)','ต้องจอง/แจ้ง early check-in ล่วงหน้า (หรือจองคืน 30 ธ.ค. ไว้เพื่อเข้าได้ทันที)','',M('Mango Apartment 48 Phan Bội Châu Hà Nội')),
-        it('09:00','สุสานโฮจิมินห์ + เจดีย์เสาเดียว หรือ คุกฮหว่าโหล','Lăng Chủ tịch Hồ Chí Minh · Chùa Một Cột · Nhà tù Hỏa Lò','สุสานเปิดเฉพาะช่วงเช้า (แต่งกายสุภาพ ปิดบางวัน/บางช่วงซ่อมบำรุง เช็คก่อน) • คุกฮหว่าโหล ~50k VND','',M('Lăng Chủ tịch Hồ Chí Minh')),
+        it('09:00','สุสานโฮจิมินห์ + เจดีย์เสาเดียว หรือ คุกฮหว่าโหล','Lăng Chủ tịch Hồ Chí Minh · Chùa Một Cột · Nhà tù Hỏa Lò','สุสานเปิดเฉพาะช่วงเช้า (แต่งกายสุภาพ ปิดบางวัน/บางช่วงซ่อมบำรุง เช็คก่อน) • คุกฮหว่าโหล ~฿65','',M('Lăng Chủ tịch Hồ Chí Minh')),
         it('11:00','ซื้อของฝาก + กาแฟ + มื้อกลางวันเร็ว','Bánh Mì 25 · 25 Hàng Cá','ของฝาก: กาแฟเวียดนาม ขนมเปี๊ยะถั่ว • อย่าลืมกระเป๋า 7 กก.!','',M('Bánh Mì 25 Hàng Cá Hà Nội')),
-        it('12:00','เรียก Grab ไปสนามบินโหน่ยบ่าย T2 (~45–60 นาที)','Nội Bài T2','วันส่งท้ายปีอาจรถติด เผื่อเวลา','~300–450k VND/คัน',M('Noi Bai International Airport Terminal 2')),
+        it('12:00','เรียก Grab ไปสนามบินโหน่ยบ่าย T2 (~45–60 นาที)','Nội Bài T2','วันส่งท้ายปีอาจรถติด เผื่อเวลา','~฿400–600/คัน',M('Noi Bai International Airport Terminal 2')),
         it('13:15','ถึงสนามบิน เช็คอิน VietJet','Nội Bài T2','','',''),
         it('15:50','✈️ VietJet VJ903 · HAN T2 15:50 → BKK สุวรรณภูมิ 17:40','Hà Nội Nội Bài → Bangkok Suvarnabhumi','เที่ยวบินขากลับ (จองแล้ว) • Carry-on 7 กก.','', '', '', true)
       ]}
     ],
     hotels:{
       sapa:[
-        {id:'h-s1', name:'Sapa Fansipan View House', area:'64 Fansipan, Sa Pa · เดินไปหมู่บ้านกัตกัต ~11 นาที, ตัวเมือง ~800 ม.', why:'⭐ ตามแผนเดิมของทริป (เช็คอิน 29 ธ.ค. 14:00) • ห้อง Family รองรับ 4 คน (2 เตียงคิงไซส์) วิวภูเขา มีระเบียง • คะแนนรีวิว ~9.0/10 (Booking) ทำเลดีมาก 9.5 • มีร้านอาหาร/บริการรับส่ง', price:'ห้องดับเบิลเริ่ม ~490k VND/คืน; ห้อง Family 4 คน ประมาณ 1–1.5 ล้าน VND/คืน (ประมาณการ ตรวจราคาจริง)', links:[['Booking.com','https://www.booking.com/hotel/vn/sapa-fansipan-view-homestay.html'],['Staycation','https://www.staycation.com/hotel/sapa-fansipan-view-house-70408363']], map:M('Sapa Fansipan View House 64 Fansipan Sa Pa')},
-        {id:'h-s2', name:'Cat Cat View Hotel', area:'46 Fansipan Rd, Sa Pa · เดินไปกัตกัต ~20 นาที ใกล้ตลาด/ทะเลสาบ', why:'ราคาประหยัด (2 ดาว) • มีห้อง Family with Balcony วิวภูเขา • ทำเลกลางระหว่างตัวเมืองกับกัตกัต', price:'ประมาณ 0.8–1.3 ล้าน VND/คืน ต่อห้อง Family (ประมาณการ)', links:[['Booking.com','https://www.booking.com/hotel/vn/cat-cat-view-sa-pa.html'],['Agoda','https://www.agoda.com/en-au/cat-cat-view-hotel/hotel/sapa-vn.html']], map:M('Cat Cat View Hotel Sa Pa')},
-        {id:'h-s3', name:'Sapa Catcat Hills Resort & Spa', area:'086 Fansipan, Sa Pa · บนเนินทางลงหมู่บ้านกัตกัต', why:'ตัวเลือกพรีเมียม 4 ดาว สไตล์ปราสาทฝรั่งเศส สระอินฟินิตี้วิวเขา สปา • ห้อง Family Quadruple 50 ตร.ม. นอนได้ 4 คน • รีวิว ~8.9/10 (Agoda)', price:'ประมาณ US$185/คืน (~4.5–5 ล้าน VND) ต่อห้อง 4 คน (ประมาณการ)', links:[['Agoda','https://www.agoda.com/en-nz/sapa-catcat-hills-resort-spa/hotel/sapa-vn.html'],['Booking.com','https://www.booking.com/hotel/vn/sapa-catcat-hills-resort-amp-spa.html'],['เว็บโรงแรม','https://catcathills.com/en/home/']], map:M('Sapa Catcat Hills Resort & Spa')}
+        {id:'h-s1', name:'Sapa Fansipan View House', area:'64 Fansipan, Sa Pa · เดินไปหมู่บ้านกัตกัต ~11 นาที, ตัวเมือง ~800 ม.', why:'⭐ ตามแผนเดิมของทริป (เช็คอิน 29 ธ.ค. 14:00) • ห้อง Family รองรับ 4 คน (2 เตียงคิงไซส์) วิวภูเขา มีระเบียง • คะแนนรีวิว ~9.0/10 (Booking) ทำเลดีมาก 9.5 • มีร้านอาหาร/บริการรับส่ง', price:'ห้องดับเบิลเริ่ม ~฿640/คืน; ห้อง Family 4 คน ประมาณ ฿1,300–2,000/คืน (ประมาณการ ตรวจราคาจริง)', links:[['Booking.com','https://www.booking.com/hotel/vn/sapa-fansipan-view-homestay.html'],['Staycation','https://www.staycation.com/hotel/sapa-fansipan-view-house-70408363']], map:M('Sapa Fansipan View House 64 Fansipan Sa Pa')},
+        {id:'h-s2', name:'Cat Cat View Hotel', area:'46 Fansipan Rd, Sa Pa · เดินไปกัตกัต ~20 นาที ใกล้ตลาด/ทะเลสาบ', why:'ราคาประหยัด (2 ดาว) • มีห้อง Family with Balcony วิวภูเขา • ทำเลกลางระหว่างตัวเมืองกับกัตกัต', price:'ประมาณ ฿1,000–1,700/คืน ต่อห้อง Family (ประมาณการ)', links:[['Booking.com','https://www.booking.com/hotel/vn/cat-cat-view-sa-pa.html'],['Agoda','https://www.agoda.com/en-au/cat-cat-view-hotel/hotel/sapa-vn.html']], map:M('Cat Cat View Hotel Sa Pa')},
+        {id:'h-s3', name:'Sapa Catcat Hills Resort & Spa', area:'086 Fansipan, Sa Pa · บนเนินทางลงหมู่บ้านกัตกัต', why:'ตัวเลือกพรีเมียม 4 ดาว สไตล์ปราสาทฝรั่งเศส สระอินฟินิตี้วิวเขา สปา • ห้อง Family Quadruple 50 ตร.ม. นอนได้ 4 คน • รีวิว ~8.9/10 (Agoda)', price:'ประมาณ ฿6,200/คืน ต่อห้อง 4 คน (ประมาณการ)', links:[['Agoda','https://www.agoda.com/en-nz/sapa-catcat-hills-resort-spa/hotel/sapa-vn.html'],['Booking.com','https://www.booking.com/hotel/vn/sapa-catcat-hills-resort-amp-spa.html'],['เว็บโรงแรม','https://catcathills.com/en/home/']], map:M('Sapa Catcat Hills Resort & Spa')}
       ],
       hanoi:[
-        {id:'h-h1', name:'Mango Apartment (Hanoi Railway Station)', area:'48 Phan Bội Châu, Hoàn Kiếm · ตรงข้ามสถานีรถไฟ', why:'เหมาะสุดสำหรับ “อาบน้ำ/พักก่อน-หลังรถไฟกลางคืน” (รีวิวหลายคนใช้แบบนี้) • มีครัว ห้องน้ำส่วนตัว เช็คอินด้วยรหัส', price:'ประมาณ US$35–60/คืน (ประมาณการ)', links:[['Booking.com','https://www.booking.com/hotel/vn/mango-apartment-hanoi-railway-station.html']], map:M('Mango Apartment 48 Phan Bội Châu Hà Nội')},
-        {id:'h-h2', name:'Mango Hotel – Hanoi Railway Station', area:'118 Lê Duẩn · ติดสถานีรถไฟ, ป้ายรถบัส 86 ไปสนามบิน ~30 ม.', why:'ห้อง Family, มีที่ฝากกระเป๋า, รับส่งสนามบิน • เช็คอินช่วงเช้าอาจมีค่าใช้จ่ายเพิ่ม', price:'เริ่ม ~US$33/คืน (ประมาณการ)', links:[['Agoda','https://www.agoda.com/mango-hotel-ha-noi-railway-station/hotel/hanoi-vn.html'],['ข้อมูลโรงแรม','https://mangohanoi.familyhotels.net/']], map:M('Mango Hotel 118 Lê Duẩn Hà Nội')},
-        {id:'h-h3', name:'La Siesta Classic Ma May', area:'94 Mã Mây, ย่านเมืองเก่า', why:'บูติกโฮเทลรีวิวดีมากใจกลาง Old Quarter เดินถึงทะเลสาบคืนดาบ/ร้านอาหาร • เหมาะถ้าอยากนอนสบายๆ (2 ห้องสำหรับ 4 คน)', price:'ประมาณ US$90–130/ห้อง/คืน (ประมาณการ)', links:[['Agoda','https://www.agoda.com/la-siesta-classic-ma-may/hotel/hanoi-vn.html']], map:M('La Siesta Classic Ma May Hanoi')}
+        {id:'h-h1', name:'Mango Apartment (Hanoi Railway Station)', area:'48 Phan Bội Châu, Hoàn Kiếm · ตรงข้ามสถานีรถไฟ', why:'เหมาะสุดสำหรับ “อาบน้ำ/พักก่อน-หลังรถไฟกลางคืน” (รีวิวหลายคนใช้แบบนี้) • มีครัว ห้องน้ำส่วนตัว เช็คอินด้วยรหัส', price:'ประมาณ ฿1,200–2,000/คืน (ประมาณการ)', links:[['Booking.com','https://www.booking.com/hotel/vn/mango-apartment-hanoi-railway-station.html']], map:M('Mango Apartment 48 Phan Bội Châu Hà Nội')},
+        {id:'h-h2', name:'Mango Hotel – Hanoi Railway Station', area:'118 Lê Duẩn · ติดสถานีรถไฟ, ป้ายรถบัส 86 ไปสนามบิน ~30 ม.', why:'ห้อง Family, มีที่ฝากกระเป๋า, รับส่งสนามบิน • เช็คอินช่วงเช้าอาจมีค่าใช้จ่ายเพิ่ม', price:'เริ่ม ~฿1,100/คืน (ประมาณการ)', links:[['Agoda','https://www.agoda.com/mango-hotel-ha-noi-railway-station/hotel/hanoi-vn.html'],['ข้อมูลโรงแรม','https://mangohanoi.familyhotels.net/']], map:M('Mango Hotel 118 Lê Duẩn Hà Nội')},
+        {id:'h-h3', name:'La Siesta Classic Ma May', area:'94 Mã Mây, ย่านเมืองเก่า', why:'บูติกโฮเทลรีวิวดีมากใจกลาง Old Quarter เดินถึงทะเลสาบคืนดาบ/ร้านอาหาร • เหมาะถ้าอยากนอนสบายๆ (2 ห้องสำหรับ 4 คน)', price:'ประมาณ ฿3,000–4,400/ห้อง/คืน (ประมาณการ)', links:[['Agoda','https://www.agoda.com/la-siesta-classic-ma-may/hotel/hanoi-vn.html']], map:M('La Siesta Classic Ma May Hanoi')}
       ]
     },
     votes:{},          // {hotelId:[names]}
     retVotes:{A:[],B:[]}
   };
+  s.days.forEach(d=>d.items.forEach(x=>applyMeta(x, (SEED_META[d.id]||{})[x.time])));
+  return s;
+}
+function applyMeta(x, m, onlyMissing){
+  const [loc,img] = m || ['',''];
+  if(!onlyMissing || x.loc===undefined) x.loc = loc;
+  if(!onlyMissing || x.img===undefined){ const w = WM[img]; x.img = w?w.img:''; x.imgCredit = w?w.credit:''; x.imgPage = w?w.page:''; }
+}
+/* map an old item (no loc/img) to the recommended data by matching its title within the same day */
+let _seedIdx = null;
+function seedIndex(){ if(_seedIdx) return _seedIdx; _seedIdx={}; const sd=seed(); sd.days.forEach(d=>d.items.forEach(x=>{ _seedIdx[d.id+'|'+x.title]=x; })); return _seedIdx; }
+function locFromMap(u){ try{ const q=new URL(u).searchParams.get('query'); return q||''; }catch(e){ return ''; } }
+const RATE = {VND_PER_THB:763, THB_PER_USD:33.5, date:'14 พ.ย. 2026'};
+const PRICE_FIX = [["ห้องดับเบิลเริ่ม ~490k VND/คืน; ห้อง Family 4 คน ประมาณ 1–1.5 ล้าน VND/คืน", "ห้องดับเบิลเริ่ม ~฿640/คืน; ห้อง Family 4 คน ประมาณ ฿1,300–2,000/คืน"], ["ประมาณ US$185/คืน (~4.5–5 ล้าน VND) ต่อห้อง 4 คน", "ประมาณ ฿6,200/คืน ต่อห้อง 4 คน"], ["ประมาณ 0.8–1.3 ล้าน VND/คืน ต่อห้อง Family", "ประมาณ ฿1,000–1,700/คืน ต่อห้อง Family"], ["50,000 VND/4 ชม. (สูงสุด 300k/24 ชม.)", "~฿65/4 ชม. (สูงสุด ~฿400/24 ชม.)"], ["~1.0–1.2M VND/คน (ห้อง 4 เตียง)", "~฿1,300–1,600/คน (ห้อง 4 เตียง)"], ["ตั๋ว ~80–180k VND ตามแพ็กเกจ", "ตั๋ว ~฿100–240 ตามแพ็กเกจ"], ["(~500–700k VND/คัน ประมาณ)", "(~฿650–900/คัน ประมาณ)"], ["ประมาณ US$90–130/ห้อง/คืน", "ประมาณ ฿3,000–4,400/ห้อง/คืน"], ["~300–450k VND/คัน ประมาณ", "~฿400–600/คัน ประมาณ"], ["(~30–60k VND/คน ประมาณ)", "(~฿40–80/คน ประมาณ)"], ["~45k VND/คน (บัส 86)", "~฿60/คน (บัส 86)"], ["~70k VND/คน (ประมาณ)", "~฿90/คน (ประมาณ)"], ["เครื่องดื่ม ~50k VND", "เครื่องดื่ม ~฿65"], ["~75k VND/คน (ประมาณ)", "~฿100/คน (ประมาณ)"], ["คุกฮหว่าโหล ~50k VND", "คุกฮหว่าโหล ~฿65"], ["ประมาณ US$35–60/คืน", "ประมาณ ฿1,200–2,000/คืน"], ["~45k VND/คน ประมาณ", "~฿60/คน ประมาณ"], ["~75k VND/คน + ไกด์", "~฿100/คน + ไกด์"], ["~850k VND/ผู้ใหญ่", "~฿1,100/ผู้ใหญ่"], ["~500–700k VND/คัน", "~฿650–900/คัน"], ["~300–450k VND/คัน", "~฿400–600/คัน"], ["ตั๋ว 150,000 VND", "ตั๋ว ~฿200/คน"], ["~200–300k VND/คน", "~฿260–390/คน"], ["เริ่ม ~US$33/คืน", "เริ่ม ~฿1,100/คืน"], ["~60–120k VND/คน", "~฿80–160/คน"], ["~30–60k VND/คน", "~฿40–80/คน"], ["50k VND/4 ชม.", "~฿65/4 ชม."], ["วัด ~50k VND", "วัด ~฿65"], ["~850k VND/คน", "~฿1,100/คน"], ["~80–180k VND", "~฿100–240"], ["~35–50k VND", "~฿45–65"], ["~60–80k VND", "~฿80–100"], ["150k VND/คน", "~฿200/คน"]];
+const niceBaht = v => { const r = v<100?5: v<1000?10: v<5000?50:100; return Math.max(r, Math.round(v/r)*r).toLocaleString('en-US'); };
+/* converts leftover VND / USD amounts in free text (e.g. typed by friends) to approximate baht */
+function toBaht(t){
+  if(!t || !/(VND|₫|đ\b|ดอง|US\$|\$\s?\d)/.test(t)) return t;
+  const num = x => parseFloat(String(x).replace(/,/g,''));
+  const mult = u => u==='k'||u==='K'?1e3 : u==='M'||u==='ล้าน'||u==='tr'?1e6 : 1;
+  t = t.replace(/(?:~\s*)?(\d+(?:[.,]\d+)*)\s*(k|K|M|ล้าน|tr)?(?:\s*[–-]\s*(\d+(?:[.,]\d+)*)\s*(k|K|M|ล้าน|tr)?)?\s*(VND|₫|đ\b|ดอง)/g, (m,a,u1,b,u2)=>{
+    const U = u2||u1; const lo = num(a)*mult(u1||U)/RATE.VND_PER_THB; const hi = b ? num(b)*mult(U)/RATE.VND_PER_THB : 0;
+    return '~฿'+niceBaht(lo)+(b?'–'+niceBaht(hi):''); });
+  t = t.replace(/(?:~\s*)?US?\$\s?(\d+(?:[.,]\d+)?)(?:\s*[–-]\s*(\d+(?:[.,]\d+)?))?/g, (m,a,b)=> '~฿'+niceBaht(num(a)*RATE.THB_PER_USD)+(b?'–'+niceBaht(num(b)*RATE.THB_PER_USD):''));
+  return t;
+}
+function fixPrices(t){ if(typeof t!=='string') return t; for(const [o,n] of PRICE_FIX) if(t.includes(o)) t=t.split(o).join(n); return toBaht(t); }
+function needsMigration(st){ return (st.v||1) < 3 || st.days.some(d=>d.items.some(x=>x.loc===undefined||x.img===undefined)); }
+function migrate(st){
+  const idx = seedIndex();
+  st.days.forEach(d=>d.items.forEach(x=>{
+    const sx = idx[d.id+'|'+x.title];
+    if(x.loc===undefined) x.loc = sx ? sx.loc : (x.locked ? '' : locFromMap(x.map));
+    if(x.img===undefined){ x.img = sx ? sx.img : ''; x.imgCredit = sx ? sx.imgCredit : ''; x.imgPage = sx ? sx.imgPage : ''; }
+  }));
+  if((st.v||1) < 3){
+    st.days.forEach(d=>{ d.notes = fixPrices(d.notes); d.items.forEach(x=>{ x.cost=fixPrices(x.cost); x.desc=fixPrices(x.desc); }); });
+    for(const c of Object.keys(st.hotels||{})) st.hotels[c].forEach(h=>{ h.price=fixPrices(h.price); h.why=fixPrices(h.why); });
+  }
+  st.v = 3;
 }
 
 /* ===================== STATE + SYNC ===================== */
@@ -228,9 +282,11 @@ async function load(){
     }
     state = remote; baseRev = state.rev; online = true; lastSync = Date.now(); cache();
     setSync('ok','🟢 ซิงก์แล้ว '+hhmm(lastSync));
+    if(needsMigration(state)) mutate(s=>{ if(needsMigration(s)) migrate(s); }, '', 'อัปเดตระบบ (เส้นทาง/รูป/ราคาบาท)');
   }catch(e){
     console.warn(e); online = false;
     state = JSON.parse(localStorage.getItem(LS)||'null') || seed();
+    if(needsMigration(state)) migrate(state);
     baseRev = state.rev;
     setSync('off','🔴 ออฟไลน์ – บันทึกในเครื่อง');
     toast('เชื่อมต่อที่เก็บข้อมูลกลางไม่ได้ ใช้ข้อมูลในเครื่องไปก่อน');
@@ -238,11 +294,11 @@ async function load(){
   render();
 }
 /* every change is an operation; on save we re-apply pending ops on top of the latest remote copy so friends' edits are not lost */
-function mutate(op, msg){
-  const res = op(state); if(res) state = res;
-  state.rev = (state.rev||0) + 1; state.updatedAt = Date.now(); state.updatedBy = me || 'ไม่ระบุชื่อ';
+function mutate(op, msg, by){
+  const res = op(state); if(res) state = res; if(by) state._by = by;
+  state.rev = (state.rev||0) + 1; state.updatedAt = Date.now(); state.updatedBy = by || me || 'ไม่ระบุชื่อ';
   cache(); render();
-  pending.push(op); if(msg) toast(msg);
+  pending.push(by ? (st=>{ const r=op(st); (r||st)._by=by; return r; }) : op); if(msg) toast(msg);
   flush();
 }
 async function flush(){
@@ -257,7 +313,7 @@ async function flush(){
       next = remote; for(const op of ops){ const r = op(next); if(r) next = r; }
       next.rev = Math.max(remote.rev, state.rev) + 1;
     } else { next = state; }
-    next.updatedAt = Date.now(); next.updatedBy = me || 'ไม่ระบุชื่อ';
+    next.updatedAt = Date.now(); next.updatedBy = next._by || me || 'ไม่ระบุชื่อ'; delete next._by;
     await pushRemote(next);
     pending = pending.slice(ops.length);
     state = next; baseRev = next.rev; online = true; lastSync = Date.now(); cache();
@@ -277,7 +333,7 @@ async function poll(manual){
     const remote = await fetchRemote();
     online = true; lastSync = Date.now();
     if(remote && remote.rev !== state.rev){
-      state = remote; baseRev = remote.rev; cache(); render();
+      state = remote; baseRev = remote.rev; if(needsMigration(state)) migrate(state); cache(); render();
       toast('อัปเดตล่าสุดจาก '+(remote.updatedBy||'เพื่อน'));
     } else if(manual) toast('ข้อมูลเป็นปัจจุบันแล้ว');
     setSync('ok','🟢 ซิงก์แล้ว '+hhmm(lastSync));
@@ -288,6 +344,61 @@ document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==
 
 /* ===================== RENDER ===================== */
 let tab = 'plan'; const collapsed = new Set();
+const routeMode = JSON.parse(localStorage.getItem('sapaRouteMode')||'{}');
+const LETTERS = i => { let s=''; i++; while(i>0){ const r=(i-1)%26; s=String.fromCharCode(65+r)+s; i=Math.floor((i-1)/26); } return s; };
+const isLatLng = v => /^\s*-?\d{1,2}(\.\d+)?\s*,\s*-?\d{1,3}(\.\d+)?\s*$/.test(v||'');
+function effLoc(x){ return (x.loc===undefined ? (x.locked?'':locFromMap(x.map)) : x.loc || '').trim(); }
+/* stops in list order; consecutive identical locations share one letter */
+function routeOf(d){
+  const stops=[], letters={};
+  d.items.forEach((x,i)=>{ const l=effLoc(x); if(!l) return;
+    const v = isLatLng(l) ? l.replace(/\s+/g,'') : l;
+    if(stops.length && stops[stops.length-1].q===v){ letters[i]=stops[stops.length-1].letter; return; }
+    const letter=LETTERS(stops.length); stops.push({q:v,letter,title:x.title}); letters[i]=letter; });
+  return {stops, letters};
+}
+const MAXWP = 9;   // Google Maps URLs allow up to 9 waypoints
+function routeLinks(stops, mode){
+  if(stops.length<2) return stops.length ? [{label:'📍 เปิดจุด A ใน Google Maps', url:M(stops[0].q), from:'A', to:'A'}] : [];
+  const parts=[]; let i=0; const per = MAXWP + 2;
+  while(i < stops.length-1){ parts.push(stops.slice(i, i+per)); i += per-1; }
+  return parts.map((p,k)=>{
+    const u='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(p[0].q)+'&destination='+encodeURIComponent(p[p.length-1].q)
+      +(p.length>2?'&waypoints='+p.slice(1,-1).map(s=>encodeURIComponent(s.q)).join('%7C'):'')+'&travelmode='+mode;
+    return {label: parts.length>1?`🗺️ เส้นทางส่วนที่ ${k+1} (${p[0].letter}→${p[p.length-1].letter})`:'🗺️ ดูเส้นทางวันนี้ใน Google Maps', url:u, from:p[0].letter, to:p[p.length-1].letter};
+  });
+}
+function routeHtml(d, R){
+  const mode = routeMode[d.id] || 'driving';
+  const links = routeLinks(R.stops, mode);
+  if(!links.length) return `<div class="route small">🗺️ ยังไม่มีสถานที่ที่ใส่ตำแหน่ง — แก้ไขกิจกรรมแล้วใส่ “ตำแหน่งสำหรับเส้นทาง”</div>`;
+  return `<div class="route">
+    <div class="row" style="justify-content:space-between"><b style="font-size:14px">🧭 เส้นทางวันนี้ (${R.stops.length} จุด)</b>
+      <span class="mode"><button class="${mode==='driving'?'on':''}" data-act="rmode" data-day="${d.id}" data-m="driving">🚗 รถ</button> <button class="${mode==='walking'?'on':''}" data-act="rmode" data-day="${d.id}" data-m="walking">🚶 เดิน</button></span></div>
+    <div>${links.map(l=>`<a class="rbtn" href="${esc(l.url)}" target="_blank" rel="noopener" data-route="${d.id}">${esc(l.label)}</a>`).join('')}</div>
+    <div class="stops">${R.stops.map(s=>`<b style="color:#dc2626">${s.letter}</b> ${esc(s.q)}`).join(' → ')}</div>
+    ${links.length>1?'<div class="small">Google Maps รับได้สูงสุด 9 จุดแวะต่อหนึ่งลิงก์ จึงแบ่งเป็นหลายส่วน (ในแอป Google Maps ตัวอักษรจะเริ่ม A ใหม่ทุกส่วน)</div>':''}
+    <div class="small">อัปเดตอัตโนมัติเมื่อเพิ่ม/แก้/ลบ/สลับลำดับ • ข้ามรายการที่ไม่มีตำแหน่ง (เช่น เที่ยวบิน)</div>
+  </div>`;
+}
+const EMOJI = x => { const t=(x.title+' '+(x.local||'')).toLowerCase();
+  return /✈️|สนามบิน|airport|ไฟลท์/.test(t)?'✈️':/รถไฟ|สถานี|ga |🚆/.test(t)?'🚆':/กาแฟ|coffee|cafe|☕/.test(t)?'☕':/อาหาร|มื้อ|เฝอ|phở|bún|ร้าน|restaurant|สุกี้|lẩu|bánh/.test(t)?'🍜':/ที่พัก|เช็คอิน|เช็คเอาท์|house|hotel|apartment|day-use/.test(t)?'🏨':/กระเช้า|cable/.test(t)?'🚡':/เทรค|trek|หุบเขา|ช่องเขา|pass/.test(t)?'⛰️':/รถ|grab|แท็กซี่/.test(t)?'🚐':'📍'; };
+function thumbHtml(x, dayId){
+  const img = safeUrl(x.img);
+  return `<button class="thumb" data-act="photo" data-day="${dayId}" data-id="${x.id}" aria-label="ดูรูป/แผนที่">${img?`<img src="${esc(img)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.replaceWith(document.createTextNode('${EMOJI(x)}'))">`:EMOJI(x)}</button>`;
+}
+function photoBox(x){
+  const img = safeUrl(x.img), loc = effLoc(x);
+  const big = img && /\/\d+px-/.test(img) ? img.replace(/\/\d+px-/,'/800px-') : img;
+  const mapUrl = safeUrl(x.map) || (loc ? M(loc) : '');
+  openModal(`<div class="lb">
+    ${img?`<img src="${esc(big)}" alt="${esc(x.title)}" onerror="if(this.src!=='${esc(img)}')this.src='${esc(img)}'">`:`<div style="font-size:72px;text-align:center;padding:24px;background:#ecfdf5;border-radius:12px">${EMOJI(x)}</div>`}
+    <h3 style="margin:10px 0 2px">${esc(x.title)}</h3>
+    ${loc?`<div class="small">📍 ${esc(loc)}</div>`:''}
+    ${img?`<div class="small" style="margin-top:4px">ภาพ: ${x.imgCredit?esc(x.imgCredit)+' · ':''}${safeUrl(x.imgPage)?`<a href="${esc(x.imgPage)}" target="_blank" rel="noopener">${/wikimedia/.test(x.imgPage)?'Wikimedia Commons':'แหล่งที่มา'}</a>`:'ลิงก์ที่เพื่อนใส่'}</div>`:'<div class="small">ยังไม่มีรูปสำหรับที่นี่ — แก้ไขกิจกรรมแล้ววางลิงก์รูปได้</div>'}
+    <div class="row" style="margin-top:12px">${mapUrl?`<a class="btn" style="text-decoration:none" href="${esc(mapUrl)}" target="_blank" rel="noopener">🗺️ เปิดใน Google Maps</a>`:''}<button class="btn sec" id="lb_close">ปิด</button></div></div>`);
+  $('#lb_close').onclick = closeModal;
+}
 function render(){
   if(!state) return;
   $('#ppl').innerHTML = PEOPLE.map(p=>`<span class="chip">👤 ${esc(FULL[p])}</span>`).join('');
@@ -296,27 +407,30 @@ function render(){
   const f = {plan:renderPlan,hotel:renderHotels,return:renderReturn,info:renderInfo,set:renderSettings}[tab];
   // keep focus-safe: don't re-render textarea being typed in
   $('#main').innerHTML = f();
-  $('#foot').innerHTML = `แก้ไขล่าสุดโดย <b>${esc(state.updatedBy||'-')}</b> · ${new Date(state.updatedAt||Date.now()).toLocaleString('th-TH')} · rev ${state.rev}<br>ทริปไอดี: ${esc(KEY)}`;
+  $('#foot').innerHTML = `ภาพ: Wikimedia Commons (ดูเครดิตในแท็บ 🎒 ข้อมูล)<br>แก้ไขล่าสุดโดย <b>${esc(state.updatedBy||'-')}</b> · ${new Date(state.updatedAt||Date.now()).toLocaleString('th-TH')} · rev ${state.rev}<br>ทริปไอดี: ${esc(KEY)}`;
 }
 function renderPlan(){
   let h = `<div class="alert"><b>⚠️ ขากลับ 31 ธ.ค. เวลาตึงมาก</b> ไฟลท์ VJ903 ออก 15:50 จากโหน่ยบ่าย แต่ซาปาอยู่ห่าง ~5–6 ชม. แนะนำ <b>แผน B</b>: นั่งรถไฟกลางคืนกลับฮานอยคืน 30 ธ.ค. (ต้องจองเพิ่ม) → <a href="#" data-go="return">ดูรายละเอียด/โหวต</a></div>`;
+  h += `<div class="small" style="margin:6px 4px">💱 ราคาทั้งหมดเป็นเงินบาทโดยประมาณ · อัตรา 1 ฿ ≈ ${RATE.VND_PER_THB} ₫ · 1 US$ ≈ ${RATE.THB_PER_USD} ฿ (อัปเดต ${RATE.date})</div>`;
   if(!me) h += `<div class="alert info">👋 เลือก “ฉันคือ” ด้านบนก่อน เพื่อให้เพื่อนเห็นว่าใครแก้ไข/โหวต</div>`;
   for(const d of state.days){
     const c = collapsed.has(d.id);
     h += `<div class="card ${c?'collapsed':''}" id="${d.id}">
       <div class="dayhd" data-act="toggle" data-day="${d.id}"><div class="d">${esc(d.date)} ${c?'▸ แตะเพื่อเปิด':'▾'}</div><h2>${esc(d.title)}</h2></div>
       <div class="items">`;
+    const R = routeOf(d); const letters = R.letters;
     d.items.forEach((x,i)=>{
       const map = safeUrl(x.map), link = safeUrl(x.link);
       h += `<div class="item ${x.locked?'locked':''}">
-        <div class="t">${esc(x.time)}</div>
+        <div class="t">${esc(x.time)}${letters[i]?`<br><span class="ltr" title="จุดในเส้นทาง">${letters[i]}</span>`:''}</div>
+        ${thumbHtml(x, d.id)}
         <div class="b">
           <div class="ti">${esc(x.title)}</div>
           ${x.local?`<div class="lc">📍 ${esc(x.local)}</div>`:''}
-          ${x.desc?`<div class="ds">${esc(x.desc)}</div>`:''}
+          ${x.desc?`<div class="ds">${esc(toBaht(x.desc))}</div>`:''}
           <div class="meta">
             ${x.locked?'<span class="tag lock">🔒 จองแล้ว</span>':''}
-            ${x.cost?`<span class="tag cost">💰 ${esc(x.cost)}</span>`:''}
+            ${x.cost?`<span class="tag cost">💰 ${/ประมาณ/.test(x.cost)?'':'ประมาณ '}${esc(toBaht(x.cost))}</span>`:''}
             ${map?`<a href="${esc(map)}" target="_blank" rel="noopener">🗺️ แผนที่</a>`:''}
             ${link?`<a href="${esc(link)}" target="_blank" rel="noopener">🔗 ลิงก์</a>`:''}
           </div>
@@ -330,6 +444,7 @@ function renderPlan(){
       </div>`;
     });
     h += `</div>
+      ${routeHtml(d, R)}
       <div class="pad dayfoot row"><button class="btn sm" data-act="add" data-day="${d.id}">＋ เพิ่มกิจกรรม</button><button class="btn sm sec" data-act="sort" data-day="${d.id}">⏱️ เรียงตามเวลา</button></div>
       <div class="pad notes"><div class="small">📝 โน้ตของวันนี้ (ทุกคนแก้ได้ บันทึกเมื่อแตะออก)</div><textarea data-notes="${d.id}">${esc(d.notes||'')}</textarea></div>
     </div>`;
@@ -341,8 +456,8 @@ function hotelCard(x){
   return `<div class="card hotel"><div class="pad">
     <h3>${esc(x.name)}</h3>
     <div class="small">📍 ${esc(x.area)}</div>
-    <div style="margin-top:6px;font-size:14px">${esc(x.why)}</div>
-    <div style="margin-top:6px;font-size:13.5px">💰 ${esc(x.price)}</div>
+    <div style="margin-top:6px;font-size:14px">${esc(toBaht(x.why))}</div>
+    <div style="margin-top:6px;font-size:13.5px">💰 ${esc(toBaht(x.price))}</div>
     <div class="row" style="margin-top:6px;font-size:13.5px">${(x.links||[]).map(l=>safeUrl(l[1])?`<a href="${esc(l[1])}" target="_blank" rel="noopener">🔗 ${esc(l[0])}</a>`:'').join(' · ')} ${safeUrl(x.map)?` · <a href="${esc(x.map)}" target="_blank" rel="noopener">🗺️ แผนที่</a>`:''}</div>
     <div class="vote"><button class="vbtn ${mine?'on':''}" data-act="vote" data-id="${x.id}">${mine?'❤️ ชอบแล้ว':'🤍 ชอบที่นี่'}</button>
       <span class="small">${v.length} เสียง</span>${v.map(n=>`<span class="vchip">${esc(n)}</span>`).join('')}</div>
@@ -351,7 +466,7 @@ function hotelCard(x){
 }
 function renderHotels(){
   const top = list => { let b=null,n=0; for(const x of list){const c=(state.votes[x.id]||[]).length; if(c>n){n=c;b=x}} return b?`🏆 นำอยู่: <b>${esc(b.name)}</b> (${n} เสียง)`:'ยังไม่มีโหวต'; };
-  return `<div class="alert info">แตะ 🤍 เพื่อโหวตที่พักที่ชอบ (โหวตได้หลายที่) ทุกคนเห็นผลโหวตเดียวกัน • ราคาทั้งหมดเป็น<b>ราคาประมาณ</b> กรุณาเช็คราคา/ห้องว่างจริงในลิงก์ (ช่วงปีใหม่ห้องเต็มเร็ว)</div>
+  return `<div class="alert info">แตะ 🤍 เพื่อโหวตที่พักที่ชอบ (โหวตได้หลายที่) ทุกคนเห็นผลโหวตเดียวกัน • ราคาทั้งหมดเป็น<b>ราคาประมาณ</b> กรุณาเช็คราคา/ห้องว่างจริงในลิงก์ (ช่วงปีใหม่ห้องเต็มเร็ว) • แปลงเป็นบาทที่ 1 ฿ ≈ ${RATE.VND_PER_THB} ₫, 1 US$ ≈ ${RATE.THB_PER_USD} ฿ (${RATE.date})</div>
   <h2 class="sec">🏔️ ซาปา (คืน 29 ธ.ค. / + คืน 30 ถ้าเลือกแผน A)</h2><div class="small" style="margin:0 4px">${top(state.hotels.sapa)}</div>
   ${state.hotels.sapa.map(hotelCard).join('')}
   <button class="btn sm sec" data-act="hadd" data-city="sapa">＋ เสนอที่พักซาปาเพิ่ม</button>
@@ -364,7 +479,7 @@ function renderReturn(){
     return `<div class="vote"><button class="vbtn ${mine?'on':''}" data-act="rvote" data-k="${k}">${mine?'✅ เลือกแผนนี้แล้ว':'เลือกแผนนี้'}</button><span class="small">${v.length} เสียง</span>${v.map(n=>`<span class="vchip">${esc(n)}</span>`).join('')}</div>`; };
   return `<div class="alert"><b>ทำไมเสี่ยง?</b> VJ903 ออก 15:50 (31 ธ.ค.) ต้องถึง T2 ไม่เกิน ~13:00–13:15 • ซาปา → สนามบินโหน่ยบ่าย ~5–6 ชม. (มีพักรถ) • ถนนซาปา–ลาวกายเป็นเขาคดเคี้ยว หมอกหนาในหน้าหนาว • วันส่งท้ายปีรถเยอะ ผู้ให้บริการบางรายเก็บเพิ่ม ~30% ช่วงวันหยุด</div>
   <div class="opt rec"><h3 style="margin:0">แผน B: รถไฟกลางคืนกลับฮานอยคืน 30 ธ.ค. <span class="badge">แนะนำ ✅</span></h3>
-    <ul><li>🚆 <b>SP4</b> ลาวกาย 21:50 → ฮานอย 05:40 (หรือ <b>SP16</b> 21:25 → 05:15) — <b>ยังไม่ได้จอง ต้องจองเพิ่ม</b> ห้องนอน 4 เตียงพอดี 4 คน ~1.0–1.2 ล้าน VND/คน (ประมาณ)</li>
+    <ul><li>🚆 <b>SP4</b> ลาวกาย 21:50 → ฮานอย 05:40 (หรือ <b>SP16</b> 21:25 → 05:15) — <b>ยังไม่ได้จอง ต้องจองเพิ่ม</b> ห้องนอน 4 เตียงพอดี 4 คน ~฿1,300–1,600/คน (ประมาณ)</li>
     <li>ออกจากซาปา ~20:15 (เหมารถ ~1 ชม. ไปสถานีลาวกาย)</li>
     <li>เช้า 31: เฝอ → อาบน้ำ day-use (Mango Apartment) → เที่ยวฮานอยช่วงเช้า → Grab ไปสนามบิน 12:00 → ถึง ~13:00 เผื่อเวลาเกือบ 3 ชม.</li>
     <li>✅ ปลอดภัยที่สุด เผื่อเวลาได้มาก • ❌ นอนซาปาแค่คืนเดียว, นอนรถไฟ 2 คืน</li>
@@ -372,15 +487,20 @@ function renderReturn(){
     <div class="row small">จองตั๋ว: <a href="https://dsvn.vn" target="_blank" rel="noopener">dsvn.vn (การรถไฟเวียดนาม)</a> · <a href="https://www.baolau.com/en/s/lao-cai/hanoi/" target="_blank" rel="noopener">Baolau</a> · <a href="https://12go.asia/en/travel/sapa/noi-bai-airport" target="_blank" rel="noopener">12Go</a></div>
     ${vb('B')}</div>
   <div class="opt"><h3 style="margin:0">แผน A: นอนซาปาคืน 30 → เช้า 31 นั่งรถตรงไปสนามบิน</h3>
-    <ul><li>🚐 ลีมูซีน/รถบัสตรง ซาปา → โหน่ยบ่าย T2: รอบเช้าที่ใช้ได้คือ <b>~07:00–07:30</b> (ถึง ~12:30–13:30) เช่น Sapa Express / Dcar limousine 07:30 → ~13:30, ราคา ~360–450k VND/คน หรือ ~US$21 (ประมาณ)</li>
-    <li>🚗 หรือ <b>เหมารถส่วนตัว SUV 4 คน</b> ออก 06:00–06:30 (~4 ชม. 40 นาที, ~US$90/คัน ≈ US$22/คน) ควบคุมเวลาเองได้ — ดีกว่ารถรอบ ถ้าเลือกแผน A</li>
+    <ul><li>🚐 ลีมูซีน/รถบัสตรง ซาปา → โหน่ยบ่าย T2: รอบเช้าที่ใช้ได้คือ <b>~07:00–07:30</b> (ถึง ~12:30–13:30) เช่น Sapa Express / Dcar limousine 07:30 → ~13:30, ราคา ~฿470–700/คน (ประมาณ)</li>
+    <li>🚗 หรือ <b>เหมารถส่วนตัว SUV 4 คน</b> ออก 06:00–06:30 (~4 ชม. 40 นาที, ~฿3,000/คัน ≈ ฿750/คน (ประมาณ)) ควบคุมเวลาเองได้ — ดีกว่ารถรอบ ถ้าเลือกแผน A</li>
     <li>✅ ได้นอนโรงแรมซาปาอีกคืน • ❌ เหลือเวลาเผื่อแค่ ~1–2 ชม. ถ้ารถติด/หมอก/รถเสีย อาจตกเครื่อง; รอบ 07:30 ไม่แนะนำ</li></ul>
     <div class="row small">ดูตาราง: <a href="https://a21tours.com/ticket/sapa-to-hanoi-airport-bus" target="_blank" rel="noopener">A21 Tours</a> · <a href="https://vexere.com/en-US/limousine-bus-ticket-booking-from-sapa-lao-cai-to-noi-bai-air-port-2424t21021881.html" target="_blank" rel="noopener">Vexere</a> · <a href="https://12go.asia/en/travel/sapa/noi-bai-airport" target="_blank" rel="noopener">12Go</a></div>
     ${vb('A')}</div>
   <div class="small">หมายเหตุ: ตาราง/ราคาจากเว็บผู้ให้บริการ ณ พ.ย. 2026 อาจเปลี่ยนแปลง ควรจองล่วงหน้าเพราะช่วงปีใหม่</div>`;
 }
+function creditsHtml(){
+  const seen=new Map(); state.days.forEach(d=>d.items.forEach(x=>{ if(safeUrl(x.img) && !seen.has(x.img)) seen.set(x.img,x); }));
+  if(!seen.size) return '';
+  return `<div class="card"><div class="pad"><h3 style="margin-top:0">📷 เครดิตภาพ</h3><div class="small">ภาพประกอบส่วนใหญ่จาก Wikimedia Commons (สัญญาอนุญาตเปิด เช่น CC BY / CC BY-SA / CC0 / สาธารณสมบัติ) บางภาพเป็นภาพประกอบทั่วไปของย่าน/อาหาร ไม่ใช่ร้านนั้นโดยตรง</div><ul style="font-size:12.5px">${[...seen.values()].map(x=>`<li>${esc(x.title)} — ${x.imgCredit?esc(x.imgCredit)+' · ':''}${safeUrl(x.imgPage)?`<a href="${esc(x.imgPage)}" target="_blank" rel="noopener">${/wikimedia/.test(x.imgPage)?'Wikimedia Commons':'แหล่งที่มา'}</a>`:'ลิงก์ที่เพื่อนใส่'}</li>`).join('')}</ul></div></div>`;
+}
 function renderInfo(){
-  return `<div class="card"><div class="pad"><h3 style="margin-top:0">🎫 การจองที่ยืนยันแล้ว</h3>
+  return creditsHtml() + `<div class="card"><div class="pad"><h3 style="margin-top:0">🎫 การจองที่ยืนยันแล้ว</h3>
   <table class="bk">
    <tr><td>✈️ ขาไป</td><td><b>Thai AirAsia FD642</b> · จ. 28 ธ.ค. · ดอนเมือง T1 06:50 → โหน่ยบ่าย T2 08:45 · กระเป๋าถือ 7 กก. (ไม่มีโหลด)</td></tr>
    <tr><td>🚆 รถไฟ</td><td><b>SP7</b> ฮานอย → ลาวกาย · 28 ธ.ค. 22:40 → ~06:27 (29 ธ.ค.) · ตู้ 3 · ห้อง 4 เตียง · Pitibhak เตียง 19 (บน) · <i>เพื่อนๆ เช็คเลขเตียงในตั๋วตัวเอง</i></td></tr>
@@ -400,7 +520,7 @@ function renderInfo(){
   <li>ของเหลวไม่เกิน 100 มล./ชิ้น รวมในถุงใส 1 ลิตร</li></ul></div></div>
   <div class="card"><div class="pad"><h3 style="margin-top:0">💡 ทิปส์</h3>
   <ul><li>คนไทยเข้าเวียดนามได้ 30 วันโดยไม่ต้องขอวีซ่า (พาสปอร์ตเหลืออายุ ≥ 6 เดือน)</li>
-  <li>เงิน: ดอง (VND) • เตรียมแบงก์ย่อยไว้ (ตู้ล็อกเกอร์สถานีรับแต่เงินสดแบงก์ 10k–100k)</li>
+  <li>เงิน: ดอง (₫/VND) • อัตราที่ใช้ในแอป: <b>1 ฿ ≈ 763 ₫</b>, 1 US$ ≈ 33.5 ฿ (อัปเดต 14 พ.ย. 2026, อัตรากลางอ้างอิง Vietcombank) ราคาบาททั้งหมดเป็น “ประมาณ” • เตรียมแบงก์ย่อยไว้ (ตู้ล็อกเกอร์สถานีรับแต่เงินสดแบงก์ 10,000–100,000 ₫ ≈ ฿13–130)</li>
   <li>แอป: Grab (เรียกรถ/อาหาร), Google Maps, Google Translate • ซื้อ eSIM ก่อนบิน</li>
   <li>รถไฟกลางคืน: เตรียมเสื้อกันหนาวบนรถไฟ (แอร์เย็น), ทิชชู่, ที่อุดหู</li>
   <li>เช็คฟานซีปันคืนก่อน: ประกาศ Sun World / พยากรณ์อากาศ ถ้าหมอกจัดหรือปิดลม สลับไปขึ้นเช้าวันที่ 30 แทนได้</li></ul></div></div>`;
@@ -426,7 +546,8 @@ function openModal(html){ $('#sheet').innerHTML = html; $('#modal').classList.ad
 function closeModal(){ $('#modal').classList.remove('on'); }
 $('#modal').addEventListener('click',e=>{ if(e.target.id==='modal') closeModal(); });
 function itemForm(dayId, item){
-  const x = item || {time:'',title:'',local:'',desc:'',cost:'',map:'',link:''};
+  const x = item || {time:'',title:'',local:'',desc:'',cost:'',map:'',link:'',img:''};
+  const curLoc = item ? effLoc(item) : '';
   openModal(`<h3 style="margin:0">${item?'✏️ แก้ไขกิจกรรม':'＋ เพิ่มกิจกรรม'}</h3>
    <label>เวลา<input id="f_time" value="${esc(x.time)}" placeholder="เช่น 09:30" inputmode="numeric"></label>
    <label>ชื่อกิจกรรม/สถานที่ *<input id="f_title" value="${esc(x.title)}"></label>
@@ -435,12 +556,20 @@ function itemForm(dayId, item){
    <label>ค่าใช้จ่ายโดยประมาณ<input id="f_cost" value="${esc(x.cost)}"></label>
    <label>ลิงก์ Google Maps (เว้นว่าง = สร้างจากชื่อให้อัตโนมัติ)<input id="f_map" value="${esc(x.map)}"></label>
    <label>ลิงก์อื่น ๆ<input id="f_link" value="${esc(x.link)}"></label>
+   <label>📍 ตำแหน่งสำหรับเส้นทาง Google Maps (ชื่อสถานที่ + เมือง หรือ lat,lng)<input id="f_loc" value="${esc(curLoc)}" placeholder="เช่น Cat Cat Village, Sa Pa หรือ 22.3297,103.8336"></label>
+   <label class="chk"><input type="checkbox" id="f_noroute" ${item && !curLoc ? 'checked':''}> ไม่ต้องใส่รายการนี้ในเส้นทาง</label>
+   <label>🖼️ รูปภาพ (ลิงก์รูป) — ไม่บังคับ<input id="f_img" value="${esc(x.img||'')}" placeholder="https://…jpg (แนะนำรูปจาก Wikimedia Commons)"></label>
    <div class="row" style="margin-top:14px"><button class="btn" id="f_save">บันทึก</button><button class="btn sec" id="f_cancel">ยกเลิก</button></div>`);
   $('#f_cancel').onclick = closeModal;
   $('#f_save').onclick = () => {
     const v = id => $('#'+id).value.trim();
     const title = v('f_title'); if(!title){ toast('ใส่ชื่อกิจกรรมก่อน'); return; }
-    const data = {time:v('f_time'),title,local:v('f_local'),desc:v('f_desc'),cost:v('f_cost'),map:v('f_map')||M((v('f_local')||title)),link:v('f_link')};
+    const noRoute = $('#f_noroute').checked;
+    const loc = noRoute ? '' : (v('f_loc') || v('f_local') || title);
+    const img = v('f_img'); if(img && !safeUrl(img)){ toast('ลิงก์รูปต้องขึ้นต้นด้วย https://'); return; }
+    const sameImg = item && img === (item.img||'');
+    const data = {time:v('f_time'),title,local:v('f_local'),desc:v('f_desc'),cost:v('f_cost'),map:v('f_map')||M(loc||v('f_local')||title),link:v('f_link'),loc,img,
+      imgCredit: sameImg ? (item.imgCredit||'') : '', imgPage: sameImg ? (item.imgPage||'') : (img ? img : '')};
     closeModal();
     if(item){ const id=item.id; mutate(s=>{ const d=s.days.find(d=>d.id===dayId); const t=d&&d.items.find(i=>i.id===id); if(t) Object.assign(t,data); },'บันทึกแล้ว'); }
     else { const nid=uid(); mutate(s=>{ const d=s.days.find(d=>d.id===dayId); if(d && !d.items.some(i=>i.id===nid)) d.items.push({id:nid,locked:false,...data}); },'เพิ่มกิจกรรมแล้ว'); }
@@ -470,6 +599,8 @@ document.addEventListener('click', e => {
   if(needMe.includes(a) && !me){ toast('เลือก “ฉันคือ” ด้านบนก่อนโหวต'); $('#meSel').focus(); return; }
   if(a==='toggle'){ collapsed.has(dayId)?collapsed.delete(dayId):collapsed.add(dayId); render(); return; }
   if(a==='add') return itemForm(dayId);
+  if(a==='photo'){ const d=state.days.find(d=>d.id===dayId); const x=d&&d.items.find(i=>i.id===b.dataset.id); if(x) photoBox(x); return; }
+  if(a==='rmode'){ routeMode[dayId]=b.dataset.m; localStorage.setItem('sapaRouteMode',JSON.stringify(routeMode)); render(); return; }
   if(a==='edit'){ const d=state.days.find(d=>d.id===dayId); return itemForm(dayId, d.items.find(i=>i.id===b.dataset.id)); }
   if(a==='del'){ const id=b.dataset.id; const d=state.days.find(d=>d.id===dayId); const t=d.items.find(i=>i.id===id);
     if(!confirm('ลบ “'+t.title+'” ?')) return; mutate(s=>{ const d=s.days.find(d=>d.id===dayId); if(d) d.items=d.items.filter(i=>i.id!==id); },'ลบแล้ว'); return; }

@@ -103,6 +103,18 @@ span.bcost{border:0;background:transparent}
 .item.excl .ti{text-decoration:line-through;color:#9ca3af}
 .tag.cut{background:#fee2e2;color:#b91c1c}
 .tag.bud{background:#ecfeff;color:#155e75}
+.tag.new{background:#fef3c7;color:#92400e;font-weight:600}
+.av{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex:0 0 32px;border-radius:50%;color:#fff;font-weight:700;font-size:14px}
+.act{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.actp{display:flex;gap:8px;align-items:center;padding:6px;border-radius:10px;border:1px solid var(--bd);cursor:pointer;font-size:13.5px}
+.actp.on{border-color:var(--g);background:var(--g3)}
+.logi{display:flex;gap:10px;padding:10px 12px;border-bottom:1px solid #f1f1f1;font-size:14px}
+.logi:last-child{border-bottom:0}
+.ltype{display:inline-block;background:#f1f5f9;border-radius:6px;padding:0 6px;font-size:12.5px}
+.lch{font-size:13px;margin-top:2px;word-break:break-word}
+.lch s{color:#9ca3af}
+#meSel.pulse{outline:3px solid #f59e0b;animation:pl 1s 4}
+@keyframes pl{50%{outline-color:transparent}}
 footer{text-align:center;color:var(--mu);font-size:12px;margin:24px 0}
 </style>
 </head>
@@ -121,6 +133,7 @@ footer{text-align:center;color:var(--mu);font-size:12px;margin:24px 0}
 <nav class="tabs" id="tabs">
   <button data-t="plan" class="on">🗓️ แผนเที่ยว</button>
   <button data-t="budget">💰 งบประมาณ</button>
+  <button data-t="log">📜 ประวัติการแก้ไข</button>
   <button data-t="hotel">🏨 ที่พัก (โหวต)</button>
   <button data-t="return">✈️ ขากลับ 31 ธ.ค.</button>
   <button data-t="info">🎒 ข้อมูล/เตรียมตัว</button>
@@ -154,7 +167,7 @@ const SEED_META = {"d1": {"04:50": ["", "dmk"], "08:45": ["Noi Bai International
 function seed(){
   const it = (time,title,local,desc,cost,map,link,locked) => ({id:uid(),time,title,local:local||'',desc:desc||'',cost:cost||'',map:map||'',link:link||'',locked:!!locked});
   const s = {
-    v:4, rev:1, updatedAt:Date.now(), updatedBy:'แผนแนะนำ',
+    v:5, rev:1, log:[LOG_START()], updatedAt:Date.now(), updatedBy:'แผนแนะนำ',
     days:[
       {id:'d1', date:'จ. 28 ธ.ค. 2026', title:'วันที่ 1 · กรุงเทพ → ฮานอย (เที่ยวฮานอยทั้งวัน + รถไฟกลางคืน)', notes:'กระเป๋าถือขึ้นเครื่องอย่างเดียว 7 กก./คน → ฝากล็อกเกอร์ที่สถานีรถไฟได้ เดินเที่ยวตัวเบา', items:[
         it('04:50','ถึงสนามบินดอนเมือง อาคาร 1','Don Mueang Airport T1','ไฟลท์ต่างประเทศ เผื่อเวลา ~2 ชม. • กระเป๋าถือรวมของใช้ส่วนตัวไม่เกิน 7 กก. (ไม่มีโหลด) • ของเหลวไม่เกิน 100 มล./ชิ้น','',M('Don Mueang International Airport Terminal 1')),
@@ -256,7 +269,7 @@ function toBaht(t){
   return t;
 }
 function fixPrices(t){ if(typeof t!=='string') return t; for(const [o,n] of PRICE_FIX) if(t.includes(o)) t=t.split(o).join(n); return toBaht(t); }
-function needsMigration(st){ return (st.v||1) < 4 || !st.budget || st.days.some(d=>d.items.some(x=>x.loc===undefined||x.img===undefined)); }
+function needsMigration(st){ return (st.v||1) < 5 || !st.budget || !Array.isArray(st.log) || st.days.some(d=>d.items.some(x=>x.loc===undefined||x.img===undefined)); }
 function migrate(st){
   const idx = seedIndex();
   st.days.forEach(d=>d.items.forEach(x=>{
@@ -279,8 +292,10 @@ function migrate(st){
     for(const c of Object.keys(st.hotels||{})) st.hotels[c].forEach(h=>{ if(h.priceTHB===undefined) h.priceTHB = HOTEL_PRICE[h.id] || parseCostTHB(h.price, true) || 0; });
     if(!st.budget) st.budget = JSON.parse(JSON.stringify(SEED_BUDGET));
   }
-  st.v = 4;
+  if(!Array.isArray(st.log)) st.log = [LOG_START()];
+  st.v = 5;
 }
+const LOG_START = () => ({id:'log-start', ts:Date.now()-1000, who:'ระบบ', type:'ระบบ', day:'', itemId:'', item:'', ch:[], note:'📜 เริ่มบันทึกประวัติการแก้ไขวันนี้ (14 พ.ย. 2026) — ทุกการแก้ไขหลังจากนี้จะแสดงที่แท็บนี้'});
 
 /* ===================== STATE + SYNC ===================== */
 let state = null, baseRev = 0, pending = [], flushing = false, online = false, lastSync = 0;
@@ -320,7 +335,7 @@ async function load(){
     }
     state = remote; baseRev = state.rev; online = true; lastSync = Date.now(); cache();
     setSync('ok','🟢 ซิงก์แล้ว '+hhmm(lastSync));
-    if(needsMigration(state)) mutate(s=>{ if(needsMigration(s)) migrate(s); }, '', 'อัปเดตระบบ (เส้นทาง/รูป/ราคาบาท)');
+    if(needsMigration(state)){ const fromV = state.v||1; mutate(s=>{ if(needsMigration(s)) migrate(s); }, '', 'ระบบ', {type:'ระบบ', note:`อัปเดตโครงสร้างข้อมูล v${fromV} → v5 (เก็บโหวต/โน้ต/งบไว้ครบ)`}); }
   }catch(e){
     console.warn(e); online = false;
     state = JSON.parse(localStorage.getItem(LS)||'null') || seed();
@@ -332,11 +347,27 @@ async function load(){
   render();
 }
 /* every change is an operation; on save we re-apply pending ops on top of the latest remote copy so friends' edits are not lost */
-function mutate(op, msg, by){
-  const res = op(state); if(res) state = res; if(by) state._by = by;
+const LOG_CAP = 500;
+const cut = (v,n=80) => { v = v==null ? '' : String(v); return v.length>n ? v.slice(0,n-1)+'…' : v; };
+function mkLog(log, by){ return {id:'L'+uid(), ts:Date.now(), who: by ? 'ระบบ' : (me||'ไม่ระบุชื่อ'), type:log.type, day:log.day||'', itemId:log.itemId||'', item:cut(log.item,70),
+  ch:(log.ch||[]).map(([f,a,b])=>[f,cut(a),cut(b)]), note:cut(log.note,120)}; }
+function mergeLog(a, b){ const seen=new Set(), out=[]; for(const e of [...(a||[]),...(b||[])]) if(e && e.id && !seen.has(e.id)){ seen.add(e.id); out.push(e); }
+  out.sort((x,y)=>x.ts-y.ts); return out.slice(-LOG_CAP); }
+let nudged = false;
+/* every change = an op re-applied on the latest remote copy; its log entry is appended (dedup by id) inside the op so concurrent edits merge */
+function mutate(op, msg, by, log){
+  if(!by && !me && !nudged){ nudged = true; $('#meSel').classList.add('pulse'); setTimeout(()=>toast('💡 เลือกชื่อ “ฉันคือ” ด้านบน เพื่อให้เพื่อนเห็นว่าใครแก้ (ตอนนี้บันทึกเป็น “ไม่ระบุชื่อ”)'),2700); }
+  const entry = log ? mkLog(log, by) : null;
+  const wrapped = st => { const prev = st.log; const r = op(st); const t = r || st;
+    if(r && r!==st) t.log = mergeLog(prev, r.log);
+    if(by) t._by = by;
+    if(entry) t.log = mergeLog(t.log, [entry]);
+    return r; };
+  if(entry) wrapped.lid = entry.id;
+  const res = wrapped(state); if(res) state = res;
   state.rev = (state.rev||0) + 1; state.updatedAt = Date.now(); state.updatedBy = by || me || 'ไม่ระบุชื่อ';
   cache(); render();
-  pending.push(by ? (st=>{ const r=op(st); (r||st)._by=by; return r; }) : op); if(msg) toast(msg);
+  pending.push(wrapped); if(msg) toast(msg);
   flush();
 }
 async function flush(){
@@ -353,6 +384,16 @@ async function flush(){
     } else { next = state; }
     next.updatedAt = Date.now(); next.updatedBy = next._by || me || 'ไม่ระบุชื่อ'; delete next._by;
     await pushRemote(next);
+    // verify: if a friend saved at the exact same moment, our write may be overwritten -> re-apply our ops on top of theirs (max 3 tries)
+    const lids = ops.map(o=>o.lid).filter(Boolean);
+    for(let tries=0; lids.length && tries<3; tries++){
+      await new Promise(r=>setTimeout(r, 900 + Math.random()*900));
+      const chk = await fetchRemote().catch(()=>null);
+      if(!chk || lids.every(id=>(chk.log||[]).some(e=>e.id===id))) break;
+      next = chk; for(const op of ops){ const r = op(next); if(r) next = r; }
+      next.rev = Math.max(chk.rev||0, state.rev||0) + 1; next.updatedAt = Date.now(); next.updatedBy = next._by || me || 'ไม่ระบุชื่อ'; delete next._by;
+      await pushRemote(next);
+    }
     pending = pending.slice(ops.length);
     state = next; baseRev = next.rev; online = true; lastSync = Date.now(); cache();
     setSync('ok','🟢 บันทึกแล้ว '+hhmm(lastSync)); render();
@@ -382,6 +423,47 @@ document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==
 
 /* ===================== RENDER ===================== */
 let tab = 'plan'; const collapsed = new Set();
+/* ===================== ACTIVITY LOG ===================== */
+const LOG_TYPES = ['เพิ่ม','แก้ไข','ลบ','ย้าย','ตัดออกจากงบ','รวมกลับ','แก้ราคา','โหวตแผนกลับ','❤️ที่พัก','แก้โน้ต','รีเซ็ต','ระบบ'];
+const TYPE_ICON = {'เพิ่ม':'➕','แก้ไข':'✏️','ลบ':'🗑️','ย้าย':'↕️','ตัดออกจากงบ':'✂️','รวมกลับ':'↩️','แก้ราคา':'💰','โหวตแผนกลับ':'✈️','❤️ที่พัก':'❤️','แก้โน้ต':'📝','รีเซ็ต':'♻️','ระบบ':'⚙️'};
+const WHO_COLOR = {Pitibhak:'#2563eb',Sarit:'#db2777',Jirateep:'#ea580c',Tawinchai:'#7c3aed','ไม่ระบุชื่อ':'#9ca3af','ระบบ':'#475569'};
+let logWho = '', logType = '';
+const TZ = 'Asia/Bangkok';
+function relTime(ts){ const s=(Date.now()-ts)/1000; if(s<45) return 'เมื่อสักครู่'; if(s<3600) return Math.round(s/60)+' นาทีที่แล้ว'; if(s<86400) return Math.round(s/3600)+' ชั่วโมงที่แล้ว'; return Math.round(s/86400)+' วันที่แล้ว'; }
+const tTime = ts => new Date(ts).toLocaleTimeString('th-TH',{timeZone:TZ,hour:'2-digit',minute:'2-digit'});
+const dKey = ts => new Date(ts).toLocaleDateString('en-CA',{timeZone:TZ});
+function dLabel(ts){ const k=dKey(ts); if(k===dKey(Date.now())) return 'วันนี้'; if(k===dKey(Date.now()-864e5)) return 'เมื่อวาน';
+  return new Date(ts).toLocaleDateString('th-TH',{timeZone:TZ,weekday:'short',day:'numeric',month:'short',year:'numeric'}); }
+const avatar = w => `<span class="av" style="background:${WHO_COLOR[w]||'#0f766e'}">${w==='ระบบ'?'⚙️':w==='ไม่ระบุชื่อ'?'?':esc(w[0])}</span>`;
+const dayShort = id => { const d=(state.days||[]).find(d=>d.id===id); return d ? d.title.split(' · ')[0] : ''; };
+function recentItems(){ const m=new Map(), lim=Date.now()-3600e3; for(const e of state.log||[]) if(e.itemId && e.ts>lim && e.type!=='ลบ') m.set(e.itemId,e.who); return m; }
+function renderLog(){
+  const log = (state.log||[]).slice().sort((a,b)=>b.ts-a.ts);
+  const whoList = [...new Set([...PEOPLE, ...log.map(e=>e.who)])];
+  let h = `<div class="card"><div class="pad"><h3 style="margin:0 0 8px">👥 ใครแอคทีฟบ้าง</h3><div class="act">` + whoList.map(w=>{
+      const es = log.filter(e=>e.who===w); const last = es[0];
+      return `<div class="actp ${logWho===w?'on':''}" data-act="logwho" data-who="${esc(w)}">${avatar(w)}<div><b>${esc(w)}</b><div class="small">${last?relTime(last.ts):'ยังไม่เคยแก้'} · ${es.length} ครั้ง</div></div></div>`; }).join('') + `</div>
+    ${!me?'<div class="alert info" style="margin-top:8px">💡 เลือก “ฉันคือ” ด้านบนก่อนแก้ไข เพื่อให้เพื่อนรู้ว่าใครเปลี่ยนอะไร</div>':''}</div></div>
+  <div class="row" style="margin:4px 2px 0;gap:8px">
+    <select data-logf="who" style="flex:1;padding:6px;border-radius:8px;border:1px solid var(--bd)"><option value="">ทุกคน</option>${whoList.map(w=>`<option ${logWho===w?'selected':''}>${esc(w)}</option>`).join('')}</select>
+    <select data-logf="type" style="flex:1;padding:6px;border-radius:8px;border:1px solid var(--bd)"><option value="">ทุกการกระทำ</option>${LOG_TYPES.map(t=>`<option ${logType===t?'selected':''}>${t}</option>`).join('')}</select>
+  </div>`;
+  const list = log.filter(e=>(!logWho||e.who===logWho)&&(!logType||e.type===logType));
+  if(!list.length) return h + `<div class="card"><div class="pad small">ยังไม่มีรายการ</div></div>`;
+  let cur = '';
+  list.slice(0,300).forEach(e=>{ const dl = dLabel(e.ts);
+    if(dl!==cur){ if(cur) h+='</div>'; h += `<h2 class="sec" style="font-size:14px">${dl}</h2><div class="card">`; cur = dl; }
+    const where = [e.day?dayShort(e.day):'', e.item].filter(Boolean).map(esc).join(' · ');
+    h += `<div class="logi">${avatar(e.who)}<div style="flex:1;min-width:0">
+      <div><b>${esc(e.who)}</b> <span class="ltype">${TYPE_ICON[e.type]||'•'} ${esc(e.type)}</span>${where?` <span style="font-size:13.5px">${where}</span>`:''}</div>
+      ${(e.ch||[]).map(([f,a,b])=>`<div class="lch"><span class="small">${esc(f)}:</span> ${a!==''?`<s>${esc(a)}</s> → `:''}<b>${esc(b)||'(ว่าง)'}</b></div>`).join('')}
+      ${e.note?`<div class="small">${esc(e.note)}</div>`:''}
+      <div class="small">🕒 ${tTime(e.ts)} น. · ${relTime(e.ts)}</div></div></div>`; });
+  h += '</div>';
+  if(list.length>300) h += `<div class="small" style="margin:6px">แสดง 300 รายการล่าสุด (เก็บสูงสุด ${LOG_CAP})</div>`;
+  return h;
+}
+setInterval(()=>{ if(tab==='log' && document.visibilityState==='visible' && !$('#modal').classList.contains('on') && !['INPUT','SELECT','TEXTAREA'].includes(document.activeElement?.tagName)) render(); }, 60000);
 /* ===================== BUDGET ===================== */
 const CATS = [
   {k:'flights',   n:'เที่ยวบิน',        e:'✈️', c:'#2563eb'},
@@ -537,7 +619,7 @@ function render(){
   $('#ppl').innerHTML = PEOPLE.map(p=>`<span class="chip">👤 ${esc(FULL[p])}</span>`).join('');
   $('#meSel').innerHTML = `<option value="">— เลือกชื่อ —</option>` + PEOPLE.map(p=>`<option ${p===me?'selected':''}>${p}</option>`).join('');
   document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===tab));
-  const f = {plan:renderPlan,budget:renderBudget,hotel:renderHotels,return:renderReturn,info:renderInfo,set:renderSettings}[tab];
+  const f = {plan:renderPlan,budget:renderBudget,log:renderLog,hotel:renderHotels,return:renderReturn,info:renderInfo,set:renderSettings}[tab];
   // keep focus-safe: don't re-render textarea being typed in
   $('#main').innerHTML = f();
   $('#foot').innerHTML = `ภาพ: Wikimedia Commons (ดูเครดิตในแท็บ 🎒 ข้อมูล)<br>แก้ไขล่าสุดโดย <b>${esc(state.updatedBy||'-')}</b> · ${new Date(state.updatedAt||Date.now()).toLocaleString('th-TH')} · rev ${state.rev}<br>ทริปไอดี: ${esc(KEY)}`;
@@ -552,7 +634,7 @@ function renderPlan(){
     h += `<div class="card ${c?'collapsed':''}" id="${d.id}">
       <div class="dayhd" data-act="toggle" data-day="${d.id}"><div class="d">${esc(d.date)} ${c?'▸ แตะเพื่อเปิด':'▾'}</div><h2>${esc(d.title)}</h2></div>
       <div class="items">`;
-    const R = routeOf(d); const letters = R.letters;
+    const R = routeOf(d); const letters = R.letters; const RECENT = recentItems();
     d.items.forEach((x,i)=>{
       const map = safeUrl(x.map), link = safeUrl(x.link);
       h += `<div class="item ${x.locked?'locked':''} ${x.excluded?'excl':''}">
@@ -564,6 +646,7 @@ function renderPlan(){
           ${x.desc?`<div class="ds">${esc(toBaht(x.desc))}</div>`:''}
           <div class="meta">
             ${x.locked?'<span class="tag lock">🔒 จองแล้ว</span>':''}
+            ${RECENT.has(x.id)?`<span class="tag new" data-act="golog" style="cursor:pointer">🆕 ล่าสุด · ${esc(RECENT.get(x.id))}</span>`:''}
             ${x.excluded?'<span class="tag cut">✂️ ตัดออกจากงบ</span>':(costPP(x)?`<span class="tag bud" data-act="gobudget" data-cat="${x.cat||guessCat(x)}" style="cursor:pointer">งบ ${B$(costPP(x))}/คน${x.paid?' · จ่ายแล้ว':''}</span>`:'')}
             ${x.cost?`<span class="tag cost">💰 ${/ประมาณ/.test(x.cost)?'':'ประมาณ '}${esc(toBaht(x.cost))}</span>`:''}
             ${map?`<a href="${esc(map)}" target="_blank" rel="noopener">🗺️ แผนที่</a>`:''}
@@ -680,6 +763,11 @@ function shareLink(){ const u = new URL(location.href); u.hash=''; if(KEY!==DEFA
 function openModal(html){ $('#sheet').innerHTML = html; $('#modal').classList.add('on'); }
 function closeModal(){ $('#modal').classList.remove('on'); }
 $('#modal').addEventListener('click',e=>{ if(e.target.id==='modal') closeModal(); });
+const DIFF_FIELDS = [['time','เวลา'],['title','ชื่อ'],['local','ชื่อท้องถิ่น'],['desc','รายละเอียด'],['cost','ราคา (ข้อความ)'],['costTHB','งบ/คน'],['cat','หมวดงบ'],['excluded','งบประมาณ'],['loc','ตำแหน่ง'],['img','รูป'],['link','ลิงก์']];
+function fmtField(f,v){ if(f==='costTHB') return v==null||v===''?'':B$(+v); if(f==='excluded') return v?'ตัดออก':'รวม'; if(f==='cat') return v&&CATK[v]?CATK[v].n:(v||''); return v==null?'':String(v); }
+function diffItem(old, data){ const ch=[]; for(const [f,l] of DIFF_FIELDS){ if(!(f in data)) continue;
+  const a = f==='costTHB' ? costPP(old) : f==='excluded' ? !!old[f] : f==='cat' ? (old.cat||guessCat(old)) : (old[f]??''); const b = f==='excluded' ? !!data[f] : (data[f]??'');
+  if(String(a)!==String(b)) ch.push([l, fmtField(f,a), fmtField(f,b)]); } return ch; }
 function itemForm(dayId, item){
   const x = item || {time:'',title:'',local:'',desc:'',cost:'',map:'',link:'',img:''};
   const curLoc = item ? effLoc(item) : '';
@@ -715,8 +803,13 @@ function itemForm(dayId, item){
     else if(textChanged){ const pc = parseCostTHB(data.cost); data.costTHB = pc!==null ? pc : (thbRaw!==''? +thbRaw : 0); } // price text edited -> recompute
     else data.costTHB = item && typeof item.costTHB==='number' ? item.costTHB : (parseCostTHB(data.cost)||0);
     closeModal();
-    if(item){ const id=item.id; mutate(s=>{ const d=s.days.find(d=>d.id===dayId); const t=d&&d.items.find(i=>i.id===id); if(t) Object.assign(t,data); },'บันทึกแล้ว'); }
-    else { const nid=uid(); mutate(s=>{ const d=s.days.find(d=>d.id===dayId); if(d && !d.items.some(i=>i.id===nid)) d.items.push({id:nid,locked:false,...data}); },'เพิ่มกิจกรรมแล้ว'); }
+    if(item){ const id=item.id; const ch = diffItem(item, data);
+      if(!ch.length){ if(['map','imgCredit','imgPage'].some(k=>(item[k]||'')!==(data[k]||''))) ch.push(['ลิงก์แผนที่/เครดิตรูป','','อัปเดต']); else { toast('ไม่มีการเปลี่ยนแปลง'); return; } }
+      const only = ch.length===1 ? ch[0][0] : '';
+      const type = only==='งบ/คน' ? 'แก้ราคา' : only==='งบประมาณ' ? (data.excluded?'ตัดออกจากงบ':'รวมกลับ') : 'แก้ไข';
+      mutate(s=>{ const d=s.days.find(d=>d.id===dayId); const t=d&&d.items.find(i=>i.id===id); if(t) Object.assign(t,data); },'บันทึกแล้ว', null, {type, day:dayId, itemId:id, item:data.title, ch}); }
+    else { const nid=uid(); mutate(s=>{ const d=s.days.find(d=>d.id===dayId); if(d && !d.items.some(i=>i.id===nid)) d.items.push({id:nid,locked:false,...data}); },'เพิ่มกิจกรรมแล้ว', null,
+      {type:'เพิ่ม', day:dayId, itemId:nid, item:data.title, ch:[['เวลา','',data.time||'-'],['งบ/คน','',B$(data.costTHB||0)]]}); }
   };
 }
 function hotelForm(city){
@@ -729,7 +822,7 @@ function hotelForm(city){
   $('#g_save').onclick = () => {
     const v = id => $('#'+id).value.trim(); const name=v('g_name'); if(!name){toast('ใส่ชื่อที่พัก');return;}
     const h = {id:'h-'+uid(),custom:true,name,area:v('g_area'),why:(v('g_why')||'')+(me?` (เสนอโดย ${me})`:''),price:v('g_price'),links:v('g_link')?[['ลิงก์',v('g_link')]]:[],map:M(name)};
-    closeModal(); mutate(s=>{ if(!s.hotels[city].some(x=>x.id===h.id)) s.hotels[city].push(h); },'เพิ่มที่พักแล้ว');
+    closeModal(); mutate(s=>{ if(!s.hotels[city].some(x=>x.id===h.id)) s.hotels[city].push(h); },'เพิ่มที่พักแล้ว', null, {type:'เพิ่ม', item:'ที่พัก: '+name, note:city==='sapa'?'ซาปา':'ฮานอย'});
   };
 }
 
@@ -747,37 +840,46 @@ document.addEventListener('click', e => {
   if(a==='gobudget'){ tab='budget'; if(b.dataset.cat) budgetOpen=b.dataset.cat; render(); scrollTo(0,0); return; }
   if(a==='bcat'){ budgetOpen = budgetOpen===b.dataset.cat ? null : b.dataset.cat; render(); return; }
   if(a==='btoggle'){ const key=b.dataset.key; const row=budgetRows().find(r=>r.key===key); if(!row) return; const nowEx=!row.excluded;
-    mutate(setRow(key,(t,k)=>{ if(k==='hotel') t.hotelExcluded=nowEx; else if(k==='buffer') t.buffer=!nowEx; else t.excluded=nowEx; }), nowEx?'ตัดออกจากงบแล้ว ✂️':'รวมกลับเข้างบแล้ว'); return; }
-  if(a==='bdel'){ const key=b.dataset.key; if(!confirm('ลบรายการงบนี้?')) return; mutate(s=>{ if(s.budget) s.budget.lines=s.budget.lines.filter(l=>'l:'+l.id!==key); },'ลบแล้ว'); return; }
+    mutate(setRow(key,(t,k)=>{ if(k==='hotel') t.hotelExcluded=nowEx; else if(k==='buffer') t.buffer=!nowEx; else t.excluded=nowEx; }), nowEx?'ตัดออกจากงบแล้ว ✂️':'รวมกลับเข้างบแล้ว', null,
+      {type:nowEx?'ตัดออกจากงบ':'รวมกลับ', day:row.day, itemId:row.kind==='item'?row.id:'', item:row.title, ch:[['งบ/คน', '', B$(row.cost)]]}); return; }
+  if(a==='bdel'){ const key=b.dataset.key; if(!confirm('ลบรายการงบนี้?')) return; const row=budgetRows().find(r=>r.key===key);
+    mutate(s=>{ if(s.budget) s.budget.lines=s.budget.lines.filter(l=>'l:'+l.id!==key); },'ลบแล้ว', null, {type:'ลบ', item:'รายการงบ: '+(row?row.title:''), ch:row?[['งบ/คน',B$(row.cost),'']]:[]}); return; }
   if(a==='badd'){ const cat=b.dataset.cat; const t=prompt('ชื่อรายการงบ (เช่น ค่าเช่าเสื้อกันหนาว)'); if(!t) return; const c=+prompt('ราคาต่อคน (บาท)','0')||0; const id='c-'+uid();
-    mutate(s=>{ s.budget=s.budget||JSON.parse(JSON.stringify(SEED_BUDGET)); if(!s.budget.lines.some(l=>l.id===id)) s.budget.lines.push({id,title:t.trim(),cat,costTHB:Math.max(0,Math.round(c)),custom:true}); },'เพิ่มรายการงบแล้ว'); return; }
+    mutate(s=>{ s.budget=s.budget||JSON.parse(JSON.stringify(SEED_BUDGET)); if(!s.budget.lines.some(l=>l.id===id)) s.budget.lines.push({id,title:t.trim(),cat,costTHB:Math.max(0,Math.round(c)),custom:true}); },'เพิ่มรายการงบแล้ว', null, {type:'เพิ่ม', item:'รายการงบ: '+t.trim(), ch:[['งบ/คน','',B$(Math.max(0,Math.round(c)))]], note:'หมวด '+CATK[cat].n}); return; }
+  if(a==='golog'){ tab='log'; render(); scrollTo(0,0); return; }
+  if(a==='logwho'){ logWho = logWho===b.dataset.who ? '' : b.dataset.who; render(); return; }
   if(a==='rmode'){ routeMode[dayId]=b.dataset.m; localStorage.setItem('sapaRouteMode',JSON.stringify(routeMode)); render(); return; }
   if(a==='edit'){ const d=state.days.find(d=>d.id===dayId); return itemForm(dayId, d.items.find(i=>i.id===b.dataset.id)); }
   if(a==='del'){ const id=b.dataset.id; const d=state.days.find(d=>d.id===dayId); const t=d.items.find(i=>i.id===id);
-    if(!confirm('ลบ “'+t.title+'” ?')) return; mutate(s=>{ const d=s.days.find(d=>d.id===dayId); if(d) d.items=d.items.filter(i=>i.id!==id); },'ลบแล้ว'); return; }
+    if(!confirm('ลบ “'+t.title+'” ?')) return; mutate(s=>{ const d=s.days.find(d=>d.id===dayId); if(d) d.items=d.items.filter(i=>i.id!==id); },'ลบแล้ว', null, {type:'ลบ', day:dayId, itemId:id, item:t.title, ch:[['เวลา',t.time||'','']]}); return; }
   if(a==='up'||a==='down'){ const d=state.days.find(d=>d.id===dayId); const i=+b.dataset.i; const j=a==='up'?i-1:i+1;
     if(j<0||j>=d.items.length) return; const id=d.items[i].id;
-    mutate(s=>{ const d=s.days.find(d=>d.id===dayId); const k=d.items.findIndex(x=>x.id===id); const m=a==='up'?k-1:k+1; if(k<0||m<0||m>=d.items.length) return; [d.items[k],d.items[m]]=[d.items[m],d.items[k]]; }); return; }
-  if(a==='sort'){ mutate(s=>{ const d=s.days.find(d=>d.id===dayId); const key=t=>{const m=String(t.time).match(/(\d{1,2})[:.](\d{2})/); return m?(+m[1])*60+(+m[2]):9999;}; d.items.sort((x,y)=>key(x)-key(y)); },'เรียงตามเวลาแล้ว'); return; }
+    mutate(s=>{ const d=s.days.find(d=>d.id===dayId); const k=d.items.findIndex(x=>x.id===id); const m=a==='up'?k-1:k+1; if(k<0||m<0||m>=d.items.length) return; [d.items[k],d.items[m]]=[d.items[m],d.items[k]]; }, '', null, {type:'ย้าย', day:dayId, itemId:id, item:d.items[i].title, ch:[['ลำดับ', String(i+1), String(j+1)]]}); return; }
+  if(a==='sort'){ mutate(s=>{ const d=s.days.find(d=>d.id===dayId); const key=t=>{const m=String(t.time).match(/(\d{1,2})[:.](\d{2})/); return m?(+m[1])*60+(+m[2]):9999;}; d.items.sort((x,y)=>key(x)-key(y)); },'เรียงตามเวลาแล้ว', null, {type:'ย้าย', day:dayId, note:'เรียงทุกกิจกรรมตามเวลา'}); return; }
   if(a==='vote'){ const id=b.dataset.id, who=me; const on=!((state.votes||{})[id]||[]).includes(who);
-    mutate(s=>{ s.votes=s.votes||{}; const v=new Set(s.votes[id]||[]); on?v.add(who):v.delete(who); s.votes[id]=[...v]; }, on?'โหวตแล้ว ❤️':'ยกเลิกโหวตแล้ว'); return; }
+    mutate(s=>{ s.votes=s.votes||{}; const v=new Set(s.votes[id]||[]); on?v.add(who):v.delete(who); s.votes[id]=[...v]; }, on?'โหวตแล้ว ❤️':'ยกเลิกโหวตแล้ว', null, {type:'❤️ที่พัก', item:([...state.hotels.sapa,...state.hotels.hanoi].find(x=>x.id===id)||{}).name, note:on?'กดถูกใจ ❤️':'ยกเลิกถูกใจ'}); return; }
   if(a==='rvote'){ const k=b.dataset.k, who=me; const on=!(state.retVotes[k]||[]).includes(who);
-    mutate(s=>{ s.retVotes=s.retVotes||{A:[],B:[]}; const v=new Set(s.retVotes[k]||[]); on?v.add(who):v.delete(who); s.retVotes[k]=[...v]; }); return; }
+    mutate(s=>{ s.retVotes=s.retVotes||{A:[],B:[]}; const v=new Set(s.retVotes[k]||[]); on?v.add(who):v.delete(who); s.retVotes[k]=[...v]; }, on?'โหวตแล้ว':'ยกเลิกโหวตแล้ว', null, {type:'โหวตแผนกลับ', item:'แผน '+k, note:on?'เลือกแผน '+k:'ยกเลิกเลือกแผน '+k}); return; }
   if(a==='hadd') return hotelForm(b.dataset.city);
-  if(a==='hdel'){ const id=b.dataset.id; if(!confirm('ลบที่พักนี้?')) return; mutate(s=>{ for(const c of ['sapa','hanoi']) s.hotels[c]=s.hotels[c].filter(x=>x.id!==id); delete s.votes[id]; },'ลบแล้ว'); return; }
+  if(a==='hdel'){ const id=b.dataset.id; if(!confirm('ลบที่พักนี้?')) return; const hn=([...state.hotels.sapa,...state.hotels.hanoi].find(x=>x.id===id)||{}).name;
+    mutate(s=>{ for(const c of ['sapa','hanoi']) s.hotels[c]=s.hotels[c].filter(x=>x.id!==id); delete s.votes[id]; },'ลบแล้ว', null, {type:'ลบ', item:'ที่พัก: '+hn}); return; }
   if(a==='copy'){ copy(shareLink()); return; }
   if(a==='export'){ const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}); const u=URL.createObjectURL(blob); const l=document.createElement('a'); l.href=u; l.download='sapa-trip-'+new Date().toISOString().slice(0,10)+'.json'; l.click(); setTimeout(()=>URL.revokeObjectURL(u),2000); return; }
-  if(a==='reset'){ if(!confirm('รีเซ็ตเป็นแผนแนะนำ? การแก้ไขและโหวตของทุกคนจะหายหมด')) return; const fresh=seed(); mutate(s=>{ const f=JSON.parse(JSON.stringify(fresh)); f.rev=s.rev; return f; },'รีเซ็ตแล้ว'); return; }
+  if(a==='reset'){ if(!confirm('รีเซ็ตเป็นแผนแนะนำ? การแก้ไขและโหวตของทุกคนจะหายหมด')) return; const fresh=seed(); mutate(s=>{ const f=JSON.parse(JSON.stringify(fresh)); f.rev=s.rev; return f; },'รีเซ็ตแล้ว', null, {type:'รีเซ็ต', note:'รีเซ็ตทั้งแผนกลับเป็นแผนแนะนำ (ประวัติยังเก็บไว้)'}); return; }
 });
 document.addEventListener('change', e => {
   if(e.target.dataset.bcost){ const key=e.target.dataset.bcost, val=Math.max(0,Math.round(+e.target.value||0));
-    mutate(setRow(key,(t)=>{ t.costTHB=val; }),'อัปเดตราคาแล้ว'); return; }
-  if(e.target.dataset.bset){ const k=e.target.dataset.bset, val=e.target.value; mutate(s=>{ s.budget=s.budget||JSON.parse(JSON.stringify(SEED_BUDGET)); s.budget[k]=val; },'อัปเดตงบแล้ว'); return; }
-  if(e.target.id==='meSel'){ me=e.target.value; localStorage.setItem('sapaMe',me); render(); if(me) toast('สวัสดี '+me+' 👋'); return; }
+    const row=budgetRows().find(r=>r.key===key); if(row && row.cost===val) return;
+    mutate(setRow(key,(t)=>{ t.costTHB=val; }),'อัปเดตราคาแล้ว', null, {type:'แก้ราคา', day:row&&row.day, itemId:row&&row.kind==='item'?row.id:'', item:row?row.title:'', ch:[['งบ/คน', row?B$(row.cost):'', B$(val)]]}); return; }
+  if(e.target.dataset.bset){ const k=e.target.dataset.bset, val=e.target.value, old=(state.budget||{})[k]||'auto';
+    const nm = v => v==='auto' ? 'อัตโนมัติ' : k==='plan' ? 'แผน '+v : (state.hotels.sapa.find(x=>x.id===v)||{}).name||v;
+    mutate(s=>{ s.budget=s.budget||JSON.parse(JSON.stringify(SEED_BUDGET)); s.budget[k]=val; },'อัปเดตงบแล้ว', null, {type:'แก้ไข', item:'ตั้งค่างบประมาณ', ch:[[k==='plan'?'แผนกลับที่ใช้คิดงบ':'ที่พักซาปาที่ใช้คิดงบ', nm(old), nm(val)]]}); return; }
+  if(e.target.dataset.logf){ if(e.target.dataset.logf==='who') logWho=e.target.value; else logType=e.target.value; render(); return; }
+  if(e.target.id==='meSel'){ $('#meSel').classList.remove('pulse'); me=e.target.value; localStorage.setItem('sapaMe',me); render(); if(me) toast('สวัสดี '+me+' 👋'); return; }
   if(e.target.dataset.notes){ const id=e.target.dataset.notes, val=e.target.value; const d=state.days.find(d=>d.id===id); if(d && d.notes===val) return;
-    mutate(s=>{ const d=s.days.find(d=>d.id===id); if(d) d.notes=val; },'บันทึกโน้ตแล้ว'); return; }
+    const oldN=d?d.notes||'':''; mutate(s=>{ const d=s.days.find(d=>d.id===id); if(d) d.notes=val; },'บันทึกโน้ตแล้ว', null, {type:'แก้โน้ต', day:id, ch:[['โน้ต', oldN, val]]}); return; }
   if(e.target.id==='importF'){ const f=e.target.files[0]; if(!f) return; const r=new FileReader();
-    r.onload=()=>{ try{ const j=JSON.parse(r.result); if(!Array.isArray(j.days)) throw 0; if(!confirm('นำเข้าไฟล์นี้แทนแผนปัจจุบัน?')) return; mutate(s=>{ const c=JSON.parse(JSON.stringify(j)); c.rev=s.rev; return c; },'นำเข้าแล้ว'); }catch(err){ toast('ไฟล์ไม่ถูกต้อง'); } }; r.readAsText(f); }
+    r.onload=()=>{ try{ const j=JSON.parse(r.result); if(!Array.isArray(j.days)) throw 0; if(!confirm('นำเข้าไฟล์นี้แทนแผนปัจจุบัน?')) return; mutate(s=>{ const c=JSON.parse(JSON.stringify(j)); c.rev=s.rev; return c; },'นำเข้าแล้ว', null, {type:'รีเซ็ต', note:'นำเข้าแผนจากไฟล์ JSON'}); }catch(err){ toast('ไฟล์ไม่ถูกต้อง'); } }; r.readAsText(f); }
 });
 $('#refreshBtn').onclick = () => { if(pending.length) flush(); else poll(true); };
 $('#shareBtn').onclick = async () => { const url=shareLink();

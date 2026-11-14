@@ -167,7 +167,7 @@ const SEED_META = {"d1": {"04:50": ["", "dmk"], "08:45": ["Noi Bai International
 function seed(){
   const it = (time,title,local,desc,cost,map,link,locked) => ({id:uid(),time,title,local:local||'',desc:desc||'',cost:cost||'',map:map||'',link:link||'',locked:!!locked});
   const s = {
-    v:7, rev:1, log:[LOG_START()], updatedAt:Date.now(), updatedBy:'แผนแนะนำ',
+    v:8, rev:1, log:[LOG_START()], updatedAt:Date.now(), updatedBy:'แผนแนะนำ',
     days:[
       {id:'d1', date:'จ. 28 ธ.ค. 2026', title:'วันที่ 1 · กรุงเทพ → ฮานอย (เที่ยวฮานอยทั้งวัน + รถไฟกลางคืน)', notes:'กระเป๋าถือขึ้นเครื่องอย่างเดียว 7 กก./คน → ฝากล็อกเกอร์ที่สถานีรถไฟได้ เดินเที่ยวตัวเบา', items:[
         it('04:50','ถึงสนามบินดอนเมือง อาคาร 1','Don Mueang Airport T1','ไฟลท์ต่างประเทศ เผื่อเวลา ~2 ชม. • กระเป๋าถือรวมของใช้ส่วนตัวไม่เกิน 7 กก. (ไม่มีโหลด) • ของเหลวไม่เกิน 100 มล./ชิ้น','',M('Don Mueang International Airport Terminal 1')),
@@ -300,7 +300,9 @@ function applyHotelBooking(st){
 /* ===== Return bus Sapa → Hanoi (Vexere, booked 14 พ.ย. 2026) — replaces return plans A/B; ticket code masked ===== */
 const BUS_BOOKING = {op:'G8 SAPA OPEN TOUR', kind:'VIP Cabin', site:'Vexere', ref:'••••OP', date:'พ. 30 ธ.ค. 2026', dep:'13:00', arr:'19:10', pax:4,
   from:'Sapa Office (ถนน N2) ถ.Nguyễn Đăng Khuê ตรงข้ามสถานีขนส่งซาปาแห่งใหม่ แขวง Hàm Rồng', to:'160 Trần Quang Khải, Hoàn Kiếm, ฮานอย',
-  seats:'A16 · A26 · B16 · B26', freeCancel:'29 ธ.ค. 2026 เวลา 12:59', estVND:500000};
+  seats:'A16 · A26 · B16 · B26', freeCancel:'29 ธ.ค. 2026 เวลา 12:59', estVND:500000, priceTHB:593};
+const BUS_TITLE = '🚌 รถบัส G8 VIP Cabin · ซาปา 13:00 → ฮานอย 19:10 ✅ จองแล้ว · ราคาจริง';
+const BUS_DESC = () => `จองแล้ว (Vexere ${BUS_BOOKING.ref}) • G8 SAPA OPEN TOUR · 4 คน · ที่นั่ง ${BUS_BOOKING.seats} • ยกเลิกฟรีก่อน ${BUS_BOOKING.freeCancel} • ราคาจริง ฿${BUS_BOOKING.priceTHB}/คน (4 คน ฿${(BUS_BOOKING.priceTHB*4).toLocaleString('en-US')})`;
 const BUS_FROM_LOC = 'Bến xe khách Sa Pa, Nguyễn Đăng Khuê, Sa Pa', BUS_TO_LOC = '160 Trần Quang Khải, Hoàn Kiếm, Hà Nội';
 function mkItem(f){ return Object.assign({id:uid(), time:'', title:'', local:'', desc:'', cost:'', map:'', link:'', locked:false, loc:'', img:'', imgCredit:'', imgPage:'', costTHB:0, cat:'misc', excluded:false}, f, {map: f.loc ? M(f.loc) : (f.map||'')}); }
 /* rebuild a day: template rows reuse a matching existing item (keeps id/photo/paid), drop rows that no longer fit, keep friends' own extra items */
@@ -326,9 +328,8 @@ function applyBusBooking(st){
       {match:/สุกี้ปลา/, set:{time:'11:00', title:'มื้อกลางวัน: สุกี้ปลาแซลมอน/ปลาสเตอร์เจียน + ซื้อขนม/น้ำไว้บนรถ', desc:'เมนูดังของซาปา อุ่นๆ เหมาะกับอากาศหนาว • ซื้อขนม/น้ำไว้กินบนรถ 6 ชม.'}},
       {match:/รับกระเป๋า|ไปออฟฟิศ G8/, set:{time:'12:00', title:'กลับโรงแรมรับกระเป๋า → Grab ไปออฟฟิศ G8 (ถนน N2)', local:'Sapa CatCat Hills → N2 Street', desc:'~10 นาที • ถาม G8 ได้ว่ามีรถรับฟรีจากโรงแรมในตัวเมืองไหม', cost:'', loc:BK_LOC, costTHB:30, cat:'transfers'}},
       {match:/ถึงออฟฟิศ G8/, set:{time:'12:30', title:'⏰ ถึงออฟฟิศ G8 ถนน N2 (ตรงข้ามสถานีขนส่งใหม่)', local:'Nguyễn Đăng Khuê, Hàm Rồng, Sa Pa', desc:'ไปถึงก่อนรถออก ~30 นาที แสดงตั๋วในแอป Vexere', loc:BUS_FROM_LOC, costTHB:0, cat:'transfers'}},
-      {match:/SP4|รถบัส G8/, set:{time:'13:00', title:'🚌 รถบัส G8 VIP Cabin · ซาปา 13:00 → ฮานอย 19:10 ✅ จองแล้ว', local:'Sa Pa → Hà Nội', locked:true,
-        desc:`จองแล้ว (Vexere ${BUS_BOOKING.ref}) • G8 SAPA OPEN TOUR · 4 คน · ที่นั่ง ${BUS_BOOKING.seats} • ยกเลิกฟรีก่อน ${BUS_BOOKING.freeCancel} • ราคายังไม่ได้ใส่ (ใช้ราคาประมาณในงบ)`,
-        cost:'~500,000 ₫/คน (ประมาณ)', loc:BUS_FROM_LOC, costTHB:est, cat:'transfers', img:'', imgCredit:'', imgPage:''}},
+      {match:/SP4|รถบัส G8/, set:{time:'13:00', title:BUS_TITLE, local:'Sa Pa → Hà Nội', locked:true,
+        desc:BUS_DESC(), cost:`฿${BUS_BOOKING.priceTHB}/คน (ราคาจริง)`, loc:BUS_FROM_LOC, costTHB:BUS_BOOKING.priceTHB, cat:'transfers', img:'', imgCredit:'', imgPage:''}},
       {match:/ถึงฮานอย 160|160 Trần Quang Khải/, set:{time:'19:10', title:'ถึงฮานอย (160 Trần Quang Khải) → Grab ไปที่พัก', local:'160 Trần Quang Khải, Hoàn Kiếm', desc:'ใกล้ทะเลสาบคืนดาบ/เมืองเก่า Grab ~10 นาที (G8 มีรถรับส่งฟรีในเขตเมืองเก่า ลองถามคนขับ)', loc:BUS_TO_LOC, costTHB:30, cat:'transfers'}},
       {match:/เช็คอินที่พักฮานอย/, set:{time:'19:40', title:'🏨 เช็คอินที่พักฮานอย — ⚠️ ยังไม่ได้จอง', local:'ย่านเมืองเก่า (แนะนำ)', desc:'ต้องจองที่พักคืน 30 ธ.ค. (2 ห้อง/4 คน) ดูตัวเลือกในแท็บ 🏨 ที่พัก • งบประมาณอยู่ในแท็บงบ', loc:'', costTHB:0, cat:'stay'}},
       {match:/มื้อเย็นเมืองเก่า|Tạ Hiện/, set:{time:'20:15', title:'มื้อเย็นเมืองเก่า + ถนนเบียร์ Tạ Hiện', local:'Phố Tạ Hiện, Hoàn Kiếm', desc:'คืนก่อนวันส่งท้ายปี คนเยอะ บรรยากาศดี', loc:'Phố Tạ Hiện, Hà Nội', costTHB:250, cat:'food'}},
@@ -353,7 +354,7 @@ function applyBusBooking(st){
   st.budget.plan = 'B';
   st.retPlansObsolete = true;
 }
-function needsMigration(st){ return (st.v||1) < 7 || !st.budget || !Array.isArray(st.log) || st.days.some(d=>d.items.some(x=>x.loc===undefined||x.img===undefined)); }
+function needsMigration(st){ return (st.v||1) < 8 || !st.budget || !Array.isArray(st.log) || st.days.some(d=>d.items.some(x=>x.loc===undefined||x.img===undefined)); }
 function migrate(st){
   const idx = seedIndex();
   st.days.forEach(d=>d.items.forEach(x=>{
@@ -387,7 +388,13 @@ function migrate(st){
       ch:[['ขากลับ', 'แผน A/B (รถไฟ SP4 / รถตรง)', 'รถบัส G8 VIP Cabin 30 ธ.ค. 13:00 → 19:10'], ['งบรถกลับ/คน', '฿1,300 (SP4)', '~฿'+vnd2thb(BUS_BOOKING.estVND)+' (ประมาณ)'], ['ที่พักฮานอยคืน 30 ธ.ค.', '', '⚠️ ยังไม่ได้จอง (งบประมาณ ~฿800/คน)']],
       note:'จองผ่าน Vexere แล้ว 4 ที่นั่ง • ยกเลิกฟรีก่อน 29 ธ.ค. 12:59 • ปรับแผนวันที่ 30–31 ธ.ค. ใหม่'};
     if(!st.log.some(x=>x.id===e.id)) st.log.push(e); }
-  st.v = 7;
+  if((st.v||1) < 8){ let old = null;
+    st.days.forEach(d=>d.items.forEach(x=>{ if(/รถบัส G8/.test(x.title||'')){ old = costPP(x); Object.assign(x, {title:BUS_TITLE, desc:BUS_DESC(), cost:`฿${BUS_BOOKING.priceTHB}/คน (ราคาจริง)`, costTHB:BUS_BOOKING.priceTHB, excluded:false}); } }));
+    const e = {id:'bus-g8-real-price', ts:Date.now()+2, who:'Pitibhak', type:'แก้ราคา', day:'d3', itemId:'', item:'รถบัส G8 VIP Cabin ซาปา → ฮานอย',
+      ch:[['งบ/คน', old!=null ? `~฿${old} (ประมาณ)` : '', `฿${BUS_BOOKING.priceTHB} (ราคาจริง)`], ['รวม 4 คน', old!=null ? `~฿${(old*4).toLocaleString('en-US')}` : '', `฿${(BUS_BOOKING.priceTHB*4).toLocaleString('en-US')}`]],
+      note:'✅ ใส่ราคาจริงของตั๋วรถบัสแล้ว (ไม่ใช่ราคาประมาณ)'};
+    if(!st.log.some(x=>x.id===e.id)) st.log.push(e); }
+  st.v = 8;
 }
 const LOG_START = () => ({id:'log-start', ts:Date.now()-1000, who:'ระบบ', type:'ระบบ', day:'', itemId:'', item:'', ch:[], note:'📜 เริ่มบันทึกประวัติการแก้ไขวันนี้ (14 พ.ย. 2026) — ทุกการแก้ไขหลังจากนี้จะแสดงที่แท็บนี้'});
 
@@ -429,7 +436,7 @@ async function load(){
     }
     state = remote; baseRev = state.rev; online = true; lastSync = Date.now(); cache();
     setSync('ok','🟢 ซิงก์แล้ว '+hhmm(lastSync));
-    if(needsMigration(state)){ const fromV = state.v||1; mutate(s=>{ if(needsMigration(s)) migrate(s); }, '', 'ระบบ', {type:'ระบบ', note:`อัปเดตโครงสร้างข้อมูล v${fromV} → v7 (เก็บโหวต/โน้ต/งบ/ประวัติไว้ครบ)`}); }
+    if(needsMigration(state)){ const fromV = state.v||1; mutate(s=>{ if(needsMigration(s)) migrate(s); }, '', 'ระบบ', {type:'ระบบ', note:`อัปเดตโครงสร้างข้อมูล v${fromV} → v8 (เก็บโหวต/โน้ต/งบ/ประวัติไว้ครบ)`}); }
   }catch(e){
     console.warn(e); online = false;
     state = JSON.parse(localStorage.getItem(LS)||'null') || seed();
@@ -792,11 +799,11 @@ function renderHotels(){
   ${state.hotels.hanoi.map(hotelCard).join('')}
   <button class="btn sm sec" data-act="hadd" data-city="hanoi">＋ เสนอที่พักฮานอยเพิ่ม</button>`;
 }
-function busCard(){ const b = BUS_BOOKING, est = vnd2thb(b.estVND);
+function busCard(){ const b = BUS_BOOKING;
   return `<div class="card"><div class="pad"><h3 style="margin:0 0 6px">🚌 ${esc(b.op)} · ${esc(b.kind)} <span class="tag lock" style="background:#dcfce7;color:#166534">✅ จองแล้ว</span></h3>
   <div style="font-size:14px">📅 <b>${esc(b.date)}</b> · ${b.pax} คน · ${esc(b.site)} รหัสตั๋ว ${esc(b.ref)}<br>
   🟢 ออก <b>${b.dep}</b> — ${esc(b.from)}<br>🔴 ถึง <b>${b.arr}</b> — ${esc(b.to)}<br>💺 ที่นั่ง ${esc(b.seats)}<br>
-  🆓 ยกเลิกฟรี<b>ก่อน ${esc(b.freeCancel)}</b><br>💰 ราคายังไม่ได้ใส่ — ในงบใช้ประมาณ ~500,000 ₫ ≈ ${B$(est)}/คน (4 คน ≈ ${B$(est*4)})</div>
+  🆓 ยกเลิกฟรี<b>ก่อน ${esc(b.freeCancel)}</b><br>💰 <b>${B$(b.priceTHB)}/คน</b> (4 คน ${B$(b.priceTHB*4)}) ✅ ราคาจริง</div>
   <div class="row small" style="margin-top:6px"><a href="${esc(M(BUS_FROM_LOC))}" target="_blank" rel="noopener">🗺️ จุดขึ้นรถ (ถนน N2)</a> · <a href="${esc(M(BUS_TO_LOC))}" target="_blank" rel="noopener">🗺️ จุดลงรถ ฮานอย</a></div></div></div>`; }
 function renderReturn(){
   if(state.retPlansObsolete) return `<div class="alert green">✅ <b>ขากลับจองครบแล้ว</b> — แผน A/B เดิม (รถไฟ SP4 / รถตรงไปสนามบิน) ยกเลิกแล้ว ไม่ต้องจองเพิ่ม</div>
@@ -806,7 +813,7 @@ function renderReturn(){
     <li>🚌 13:00 → 19:10 ฮานอย (160 Trần Quang Khải) → Grab ~10 นาทีไปที่พัก</li>
     <li>🏨 นอนฮานอยคืน 30 ธ.ค. — <b>⚠️ ยังไม่ได้จอง</b> <a href="#" data-go="hotel">ดูตัวเลือก</a></li>
     <li><b>31 ธ.ค.</b> เช้าเมืองเก่าสบายๆ → 12:00 Grab ไปโหน่ยบ่าย T2 → ✈️ VJ903 15:50 → สุวรรณภูมิ 17:40</li></ul></div></div>
-  <div class="small" style="margin:6px 4px">ราคาประมาณอ้างอิงเว็บ G8 Open Tour / TravelBus (พ.ย. 2026): ห้องเดี่ยวชั้นบน ~410,000–440,000 ₫, ชั้นล่าง ~510,000 ₫</div>`;
+`;
   const vb = k => { const v = state.retVotes[k]||[]; const mine = v.includes(me);
     return `<div class="vote"><button class="vbtn ${mine?'on':''}" data-act="rvote" data-k="${k}">${mine?'✅ เลือกแผนนี้แล้ว':'เลือกแผนนี้'}</button><span class="small">${v.length} เสียง</span>${v.map(n=>`<span class="vchip">${esc(n)}</span>`).join('')}</div>`; };
   return `<div class="alert"><b>ทำไมเสี่ยง?</b> VJ903 ออก 15:50 (31 ธ.ค.) ต้องถึง T2 ไม่เกิน ~13:00–13:15 • ซาปา → สนามบินโหน่ยบ่าย ~5–6 ชม. (มีพักรถ) • ถนนซาปา–ลาวกายเป็นเขาคดเคี้ยว หมอกหนาในหน้าหนาว • วันส่งท้ายปีรถเยอะ ผู้ให้บริการบางรายเก็บเพิ่ม ~30% ช่วงวันหยุด</div>
@@ -837,7 +844,7 @@ function renderInfo(){
    <tr><td>✈️ ขาไป</td><td><b>Thai AirAsia FD642</b> · จ. 28 ธ.ค. · ดอนเมือง T1 06:50 → โหน่ยบ่าย T2 08:45 · กระเป๋าถือ 7 กก. (ไม่มีโหลด)</td></tr>
    <tr><td>🚆 รถไฟ</td><td><b>SP7</b> ฮานอย → ลาวกาย · 28 ธ.ค. 22:40 → ~06:27 (29 ธ.ค.) · ตู้ 3 · ห้อง 4 เตียง · Pitibhak เตียง 19 (บน) · <i>เพื่อนๆ เช็คเลขเตียงในตั๋วตัวเอง</i></td></tr>
    <tr><td>🏨 ที่พักซาปา</td><td><b>Sapa CatCat Hills Resort & Spa</b> (Agoda ${HOTEL_BOOKING.ref}) · อ. 29 → พ. 30 ธ.ค. (1 คืน) · 2 ห้อง · เช็คอิน 14:00 · ≈ ${B$(vnd2thb(HOTEL_BOOKING.totalVND))} · ตัดบัตร 20 ธ.ค. · ยกเลิกฟรีถึง 21 ธ.ค. 23:59</td></tr>
-   <tr><td>🚌 รถบัสกลับ</td><td><b>G8 SAPA OPEN TOUR · VIP Cabin</b> (Vexere ${BUS_BOOKING.ref}) · พ. 30 ธ.ค. · ซาปา (ออฟฟิศถนน N2) 13:00 → ฮานอย 160 Trần Quang Khải 19:10 · 4 คน ที่นั่ง ${BUS_BOOKING.seats} · ยกเลิกฟรีก่อน 29 ธ.ค. 12:59</td></tr>
+   <tr><td>🚌 รถบัสกลับ</td><td><b>G8 SAPA OPEN TOUR · VIP Cabin</b> (Vexere ${BUS_BOOKING.ref}) · พ. 30 ธ.ค. · ซาปา (ออฟฟิศถนน N2) 13:00 → ฮานอย 160 Trần Quang Khải 19:10 · 4 คน ที่นั่ง ${BUS_BOOKING.seats} · ${B$(BUS_BOOKING.priceTHB)}/คน (รวม ${B$(BUS_BOOKING.priceTHB*4)}) · ยกเลิกฟรีก่อน 29 ธ.ค. 12:59</td></tr>
    <tr><td>🏨 ฮานอย</td><td>คืน 30 ธ.ค. — <b style="color:#b91c1c">⚠️ ยังไม่ได้จอง</b></td></tr>
    <tr><td>✈️ ขากลับ</td><td><b>VietJet VJ903</b> · พฤ. 31 ธ.ค. · โหน่ยบ่าย T2 15:50 → สุวรรณภูมิ 17:40 · กระเป๋าถือ (ไม่มีโหลด)</td></tr>
   </table>

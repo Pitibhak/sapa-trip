@@ -103,6 +103,16 @@ span.bcost{border:0;background:transparent}
 .item.excl .ti{text-decoration:line-through;color:#9ca3af}
 .tag.cut{background:#fee2e2;color:#b91c1c}
 .tag.bud{background:#ecfeff;color:#155e75}
+.mapchips{display:flex;gap:6px;overflow-x:auto;padding:2px 2px 8px;-webkit-overflow-scrolling:touch}
+.mapchips button{flex:0 0 auto;border:1px solid var(--bd);background:#fff;border-radius:999px;padding:6px 12px;font-size:13.5px;font-family:inherit}
+.mapchips button.on{color:#fff;border-color:transparent}
+#mapSlot{height:calc(100vh - 290px);min-height:340px;max-height:640px;border-radius:14px;overflow:hidden;border:1px solid var(--bd);background:#eef2f3}
+#lmap{width:100%;height:100%}
+.pin{width:26px;height:26px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.pin b{transform:rotate(45deg);color:#fff;font:700 12px/1 'Noto Sans Thai',sans-serif}
+.mpop{font-family:'Noto Sans Thai',sans-serif;font-size:13px;min-width:180px;max-width:230px}
+.mpop img{width:100%;max-height:120px;object-fit:cover;border-radius:8px;margin-bottom:4px}
+.leaflet-popup-content{margin:10px 12px}
 .tag.new{background:#fef3c7;color:#92400e;font-weight:600}
 .av{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex:0 0 32px;border-radius:50%;color:#fff;font-weight:700;font-size:14px}
 .act{display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -132,6 +142,7 @@ footer{text-align:center;color:var(--mu);font-size:12px;margin:24px 0}
 </div>
 <nav class="tabs" id="tabs">
   <button data-t="plan" class="on">🗓️ แผนเที่ยว</button>
+  <button data-t="map">🗺️ แผนที่</button>
   <button data-t="budget">💰 งบประมาณ</button>
   <button data-t="log">📜 ประวัติการแก้ไข</button>
   <button data-t="hotel">🏨 ที่พัก (โหวต)</button>
@@ -167,7 +178,7 @@ const SEED_META = {"d1": {"04:50": ["", "dmk"], "08:45": ["Noi Bai International
 function seed(){
   const it = (time,title,local,desc,cost,map,link,locked) => ({id:uid(),time,title,local:local||'',desc:desc||'',cost:cost||'',map:map||'',link:link||'',locked:!!locked});
   const s = {
-    v:8, rev:1, log:[LOG_START()], updatedAt:Date.now(), updatedBy:'แผนแนะนำ',
+    v:10, rev:1, geo:{}, log:[LOG_START()], updatedAt:Date.now(), updatedBy:'แผนแนะนำ',
     days:[
       {id:'d1', date:'จ. 28 ธ.ค. 2026', title:'วันที่ 1 · กรุงเทพ → ฮานอย (เที่ยวฮานอยทั้งวัน + รถไฟกลางคืน)', notes:'กระเป๋าถือขึ้นเครื่องอย่างเดียว 7 กก./คน → ฝากล็อกเกอร์ที่สถานีรถไฟได้ เดินเที่ยวตัวเบา', items:[
         it('04:50','ถึงสนามบินดอนเมือง อาคาร 1','Don Mueang Airport T1','ไฟลท์ต่างประเทศ เผื่อเวลา ~2 ชม. • กระเป๋าถือรวมของใช้ส่วนตัวไม่เกิน 7 กก. (ไม่มีโหลด) • ของเหลวไม่เกิน 100 มล./ชิ้น','',M('Don Mueang International Airport Terminal 1')),
@@ -236,7 +247,7 @@ function seed(){
   s.days.forEach(d=>d.items.forEach(x=>{ applyMeta(x, (SEED_META[d.id]||{})[x.time]); applyBudgetMeta(x, (BUDGET_META[d.id]||{})[x.time]); }));
   for(const c of ['sapa','hanoi']) s.hotels[c].forEach(h=>{ h.priceTHB = HOTEL_PRICE[h.id]||0; });
   s.budget = JSON.parse(JSON.stringify(SEED_BUDGET));
-  applyHotelBooking(s); applyBusBooking(s);
+  applyHotelBooking(s); applyBusBooking(s); applyHanoiBooking(s);
   return s;
 }
 function applyBudgetMeta(x, m){
@@ -354,7 +365,32 @@ function applyBusBooking(st){
   st.budget.plan = 'B';
   st.retPlansObsolete = true;
 }
-function needsMigration(st){ return (st.v||1) < 8 || !st.budget || !Array.isArray(st.log) || st.days.some(d=>d.items.some(x=>x.loc===undefined||x.img===undefined)); }
+/* ===== Hanoi hotel night 30 Dec (Agoda, booked 15 พ.ย. 2026) — hotel name not on screenshots; booking no. masked ===== */
+const HANOI_BOOKING = {site:'Agoda', ref:'•••••8089', checkin:'พ. 30 ธ.ค. 2026 · เช็คอิน 14:00', checkout:'พฤ. 31 ธ.ค. 2026', nights:1, rooms:1,
+  roomsVND:1296324, feesVND:173707, totalVND:1470031, maxVND:1543533, payDate:'14 ธ.ค. 2026', freeCancel:'15 ธ.ค. 2026 เวลา 23:59 (เวลาฮานอย)'};
+const HN_NAME = 'ที่พักฮานอย (Agoda) — รอชื่อโรงแรม';
+const hnPP = () => Math.round(vnd2thb(HANOI_BOOKING.totalVND)/4);
+function applyHanoiBooking(st){
+  const L = st.hotels.hanoi; let h = L.find(x=>x.id==='h-hbk');
+  if(!h){ h = {id:'h-hbk', links:[]}; }
+  const tot = vnd2thb(HANOI_BOOKING.totalVND);
+  Object.assign(h, {name:HN_NAME, area:'ฮานอย · ชื่อ/ที่อยู่ยังไม่ได้ใส่ (ดูในอีเมล/แอป Agoda)', why:'✅ ที่พักคืน 30 ธ.ค. ที่จองแล้ว • 1 ห้อง สำหรับ 4 คน',
+    price:`ราคาจริง (Agoda) ≈ ฿${tot.toLocaleString('en-US')} รวมภาษี/ค่าธรรมเนียม · 1 ห้อง × 1 คืน ≈ ฿${hnPP().toLocaleString('en-US')}/คน`, priceTHB:tot, booked:HANOI_BOOKING, map:''});
+  st.hotels.hanoi = [h, ...L.filter(x=>x!==h)];
+  const d3 = st.days.find(d=>d.id==='d3');
+  if(d3){ d3.notes = (d3.notes||'').replace('⚠️ ที่พักฮานอยคืน 30 ธ.ค. ยังไม่ได้จอง (ดูแท็บที่พัก)', '🏨 ที่พักฮานอยคืน 30 ธ.ค. จองแล้ว (Agoda)');
+    const x = d3.items.find(x=>/เช็คอินที่พักฮานอย/.test(x.title||''));
+    const f = {title:'🏨 เช็คอินที่พักฮานอย (Agoda) ✅ จองแล้ว — รอชื่อโรงแรม', local:'ฮานอย (ดูชื่อ/ที่อยู่ในอีเมล Agoda)', locked:true, cat:'stay', costTHB:0,
+      desc:'จองแล้ว 1 ห้อง/4 คน คืน 30 ธ.ค. • เช็คอินได้ตั้งแต่ 14:00 (เราถึง ~19:40) • ตัดบัตรอัตโนมัติ 14 ธ.ค. • ยกเลิกฟรีถึง 15 ธ.ค. 23:59 เวลาฮานอย'};
+    if(x) Object.assign(x, f); else d3.items.push(mkItem(Object.assign({time:'19:40', loc:''}, f))); }
+  st.budget = st.budget || JSON.parse(JSON.stringify(SEED_BUDGET));
+  let l = st.budget.lines.find(l=>l.id==='b-hanoi-hotel'); if(!l){ l = {id:'b-hanoi-hotel', cat:'stay'}; st.budget.lines.push(l); }
+  const mx = vnd2thb(HANOI_BOOKING.maxVND);
+  Object.assign(l, {title:`ที่พักฮานอย คืน 30 ธ.ค. ✅ จองแล้ว (ราคาจริง) — Agoda ${HANOI_BOOKING.totalVND.toLocaleString('en-US')} ₫ ≈ ฿${tot.toLocaleString('en-US')} ÷ 4 • ถ้าเรียกเก็บเป็นสกุลอื่นอาจถึง ~฿${mx.toLocaleString('en-US')} (≈฿${Math.round(mx/4)}/คน)`, costTHB:hnPP(), excluded:false});
+}
+/* ===== map: coordinates looked up once via OpenStreetMap Nominatim (14–15 พ.ย. 2026); [lat,lng,approx?] ===== */
+const GEO_SEED = {"Ga Hà Nội, 120 Lê Duẩn, Hà Nội": [21.02421, 105.84109], "Bún Chả Hương Liên, 24 Lê Văn Hưu, Hà Nội": [21.01805, 105.85388], "Văn Miếu - Quốc Tử Giám, Hà Nội": [21.02879, 105.83595], "Đền Ngọc Sơn, Hà Nội": [21.03073, 105.85238], "Cafe Giảng, 39 Nguyễn Hữu Huân, Hà Nội": [21.03361, 105.85462], "Nhà Thờ Lớn Hà Nội": [21.02865, 105.84886], "Hanoi Train Street, Phùng Hưng, Hà Nội": [21.03015, 105.84407], "Phở Gia Truyền Bát Đàn, 49 Bát Đàn, Hà Nội": [21.03364, 105.84638], "Ga Hà Nội, Trần Quý Cáp, Hà Nội": [21.02682, 105.84049], "Ga Lào Cai, Lào Cai": [22.49185, 103.97808], "Sapa CatCat Hills Resort & Spa, 086 Fansipan, Sa Pa": [22.33544, 103.84113, 1], "Mam Restaurant & Coffee, 27 Hoàng Liên, Sa Pa": [22.33412, 103.84003, 1], "Fansipan Legend Cable Car Station, Sa Pa": [22.33708, 103.82432], "Nhà Thờ Đá Sa Pa": [22.3351, 103.84232], "Bản Cát Cát, Sa Pa": [22.32853, 103.83468], "Sapa Nature View Restaurant & Sky Bar, 061 Fansipan, Sa Pa": [22.33257, 103.83982], "Chợ đêm Sa Pa": [22.3386, 103.85155], "Moana Sapa": [22.32736, 103.84628], "Núi Hàm Rồng, Sa Pa": [22.33258, 103.86243], "Quảng trường Sa Pa": [22.3351, 103.84232, 1], "Bến xe khách Sa Pa, Nguyễn Đăng Khuê, Sa Pa": [22.33952, 103.85354], "160 Trần Quang Khải, Hoàn Kiếm, Hà Nội": [21.03318, 105.85552], "Phố Tạ Hiện, Hà Nội": [21.03419, 105.85208], "Phở Thìn, 13 Lò Đúc, Hà Nội": [21.01704, 105.856], "Noi Bai International Airport Terminal 2, Hanoi": [21.21889, 105.80446, 1], "Lăng Chủ tịch Hồ Chí Minh, Hà Nội": [21.03678, 105.83469], "Bánh Mì 25, 25 Hàng Cá, Hà Nội": [21.03608, 105.84869], "Sapa Fansipan View House, 64 Fansipan, Sa Pa": [22.33267, 103.83901]};
+function needsMigration(st){ return (st.v||1) < 10 || !st.geo || !st.budget || !Array.isArray(st.log) || st.days.some(d=>d.items.some(x=>x.loc===undefined||x.img===undefined)); }
 function migrate(st){
   const idx = seedIndex();
   st.days.forEach(d=>d.items.forEach(x=>{
@@ -394,7 +430,15 @@ function migrate(st){
       ch:[['งบ/คน', old!=null ? `~฿${old} (ประมาณ)` : '', `฿${BUS_BOOKING.priceTHB} (ราคาจริง)`], ['รวม 4 คน', old!=null ? `~฿${(old*4).toLocaleString('en-US')}` : '', `฿${(BUS_BOOKING.priceTHB*4).toLocaleString('en-US')}`]],
       note:'✅ ใส่ราคาจริงของตั๋วรถบัสแล้ว (ไม่ใช่ราคาประมาณ)'};
     if(!st.log.some(x=>x.id===e.id)) st.log.push(e); }
-  st.v = 8;
+  if((st.v||1) < 9){ const old = ((st.budget||{}).lines||[]).find(l=>l.id==='b-hanoi-hotel'); const oc = old ? +old.costTHB||0 : null;
+    applyHanoiBooking(st);
+    const e = {id:'booking-hanoi-hotel', ts:Date.now()+3, who:'Pitibhak', type:'✅ จองที่พัก', day:'d3', itemId:'', item:HN_NAME,
+      ch:[['ที่พักฮานอยคืน 30 ธ.ค.', '⚠️ ยังไม่ได้จอง', 'จองแล้ว (Agoda, 1 ห้อง)'], ['ราคาที่พัก (รวม)', '', `฿${vnd2thb(HANOI_BOOKING.totalVND).toLocaleString('en-US')} (${HANOI_BOOKING.totalVND.toLocaleString('en-US')} ₫)`], ['งบที่พัก/คน', oc!=null?`~฿${oc} (ประมาณ)`:'', `฿${hnPP()} (ราคาจริง)`]],
+      note:'จองผ่าน Agoda แล้ว • ตัดบัตรอัตโนมัติ 14 ธ.ค. • ยกเลิกฟรีถึง 15 ธ.ค. 23:59 (เวลาฮานอย)'};
+    if(!st.log.some(x=>x.id===e.id)) st.log.push(e); }
+  if((st.v||1) < 10 || !st.geo){ st.geo = st.geo || {};
+    st.days.forEach(d=>d.items.forEach(x=>{ const l=(x.loc||'').trim(); const g=GEO_SEED[l]; if(g && !(st.geo[l]&&st.geo[l].ll)) st.geo[l] = {ll:[g[0],g[1]], a:g[2]?1:0, ts:Date.now()}; })); }
+  st.v = 10;
 }
 const LOG_START = () => ({id:'log-start', ts:Date.now()-1000, who:'ระบบ', type:'ระบบ', day:'', itemId:'', item:'', ch:[], note:'📜 เริ่มบันทึกประวัติการแก้ไขวันนี้ (14 พ.ย. 2026) — ทุกการแก้ไขหลังจากนี้จะแสดงที่แท็บนี้'});
 
@@ -436,7 +480,7 @@ async function load(){
     }
     state = remote; baseRev = state.rev; online = true; lastSync = Date.now(); cache();
     setSync('ok','🟢 ซิงก์แล้ว '+hhmm(lastSync));
-    if(needsMigration(state)){ const fromV = state.v||1; mutate(s=>{ if(needsMigration(s)) migrate(s); }, '', 'ระบบ', {type:'ระบบ', note:`อัปเดตโครงสร้างข้อมูล v${fromV} → v8 (เก็บโหวต/โน้ต/งบ/ประวัติไว้ครบ)`}); }
+    if(needsMigration(state)){ const fromV = state.v||1; mutate(s=>{ if(needsMigration(s)) migrate(s); }, '', 'ระบบ', {type:'ระบบ', note:`อัปเดตโครงสร้างข้อมูล v${fromV} → v10 (เก็บโหวต/โน้ต/งบ/ประวัติไว้ครบ + พิกัดแผนที่)`}); }
   }catch(e){
     console.warn(e); online = false;
     state = JSON.parse(localStorage.getItem(LS)||'null') || seed();
@@ -524,6 +568,114 @@ document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==
 
 /* ===================== RENDER ===================== */
 let tab = 'plan'; const collapsed = new Set();
+/* ===================== MAP (Leaflet + OpenFreeMap vector tiles via MapLibre GL, no API key; OSM raster fallback) ===================== */
+const DAY_COLORS = {d1:'#2563eb', d2:'#16a34a', d3:'#ea580c', d4:'#db2777'};
+const dayColor = id => DAY_COLORS[id] || '#475569';
+let mapDay = 'all', LMAP = null, mapEl = null, mapLayers = null, mapSig = '', leafletP = null;
+const addCss = h => { const c = document.createElement('link'); c.rel='stylesheet'; c.href=h; document.head.appendChild(c); };
+const addJs = src => new Promise((res, rej)=>{ const sc = document.createElement('script'); sc.src = src; sc.onload = res; sc.onerror = ()=>rej(new Error(src)); document.head.appendChild(sc); });
+const hasWebGL = () => { try{ const c = document.createElement('canvas'); return !!(window.WebGLRenderingContext && (c.getContext('webgl2') || c.getContext('webgl'))); }catch(e){ return false; } };
+function loadLeaflet(){
+  if(leafletP) return leafletP;
+  leafletP = (async()=>{
+    addCss('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'); await addJs('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js');
+    if(hasWebGL()){ try{ addCss('https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css'); await addJs('https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js');
+      await addJs('https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.0.22/leaflet-maplibre-gl.js'); }catch(e){ console.warn(e); } }
+  })().catch(e=>{ leafletP = null; throw e; });
+  return leafletP;
+}
+function geoOf(l){
+  if(isLatLng(l)){ const [a,b] = l.split(',').map(Number); return {ll:[a,b]}; }
+  const g = (state.geo||{})[l]; if(g && g.ll) return g;
+  const sd = GEO_SEED[l]; if(sd) return {ll:[sd[0],sd[1]], a:sd[2]?1:0};
+  return g || null;
+}
+/* one stop per place, in plan order; consecutive items at the same place share a pin (same as the A/B/C route letters) */
+function mapStops(){
+  const out = [];
+  state.days.forEach(d=>{ let n = 0; d.items.forEach(x=>{ const l = effLoc(x); if(!l) return;
+    const prev = out[out.length-1]; if(prev && prev.day===d.id && prev.loc===l){ prev.items.push(x); return; }
+    out.push({day:d.id, n:++n, loc:l, g:geoOf(l), items:[x]}); }); });
+  return out;
+}
+const kmBetween = (a,b) => { const R=6371, r=Math.PI/180, dl=(b[0]-a[0])*r, dn=(b[1]-a[1])*r;
+  const h = Math.sin(dl/2)**2 + Math.cos(a[0]*r)*Math.cos(b[0]*r)*Math.sin(dn/2)**2; return 2*R*Math.asin(Math.sqrt(h)); };
+const geoZone = ll => ll[0] < 21.6 ? 'hanoi' : ll[0] > 22.42 ? 'laocai' : 'sapa';
+const dayShortDate = d => { const p = (d.date||'').split(' '); return p.length>2 ? p[1]+' '+p[2] : d.id; };
+let geoBusy = false, lastGeo = 0; const geoTried = new Set();
+function renderMap(){
+  const stops = mapStops(), bad = stops.filter(s=>!s.g || !s.g.ll);
+  const chip = (k, label, c) => `<button class="${mapDay===k?'on':''}" style="${mapDay===k?`background:${c}`:`color:${c}`}" data-act="mapday" data-d="${k}">${label}</button>`;
+  const seen = new Set();
+  return `<div class="mapchips">${chip('all','ทั้งหมด','#0f766e')}${state.days.map(d=>chip(d.id, '● '+dayShortDate(d), dayColor(d.id))).join('')}</div>
+  <div id="mapSlot"><div class="pad small">⏳ กำลังโหลดแผนที่…</div></div>
+  <div class="small" style="margin:6px 4px">📍 หมุดเลขตามลำดับในแต่ละวัน (สีตามวัน) • เส้นทึบ = ในเมือง • <b>เส้นประ</b> = เดินทางข้ามเมือง (ฮานอย ↔ ลาวกาย/ซาปา) • แตะหมุดเพื่อดูรูป/เวลา • แผนที่อัปเดตเองเมื่อเพื่อนแก้สถานที่</div>
+  ${bad.length?`<div class="card"><div class="pad"><h3 style="margin:0 0 6px">❓ ยังหาพิกัดไม่เจอ (${bad.length})</h3><ul style="margin:0;padding-left:18px;font-size:13.5px">${bad.filter(s=>!seen.has(s.loc)&&seen.add(s.loc)).map(s=>`<li><span style="color:${dayColor(s.day)}">●</span> ${esc(s.items[0].time)} ${esc(s.items[0].title)} — <i>${esc(s.loc)}</i> ${s.g&&s.g.fail?'<span class="small">(ค้นหาไม่เจอ — แก้ “ตำแหน่ง” เป็นชื่อสถานที่ภาษาเวียดนาม/อังกฤษ หรือพิกัด lat,lng)</span>':'<span class="small">(กำลังค้นหาพิกัด…)</span>'}</li>`).join('')}</ul></div></div>`:''}
+  <div class="small" style="margin:6px 4px">แผนที่เวกเตอร์: OpenFreeMap · © OpenMapTiles · © OpenStreetMap contributors • พิกัดจาก OpenStreetMap Nominatim (≈ = ตำแหน่งโดยประมาณ)</div>`;
+}
+async function setupMap(){
+  if(!$('#mapSlot')) return;
+  try{ await loadLeaflet(); }catch(e){ const sl=$('#mapSlot'); if(sl) sl.innerHTML = '<div class="pad small">โหลดแผนที่ไม่ได้ (ตรวจสอบอินเทอร์เน็ต) แล้วกด 🔄</div>'; return; }
+  const slot = $('#mapSlot'); if(!slot || tab!=='map') return;
+  if(!mapEl){ mapEl = document.createElement('div'); mapEl.id = 'lmap'; }
+  slot.innerHTML = ''; slot.appendChild(mapEl);
+  if(!LMAP){
+    LMAP = L.map(mapEl, {zoomControl:true, attributionControl:true});
+    const osmAttr = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors';
+    if(L.maplibreGL && window.maplibregl) L.maplibreGL({style:'https://tiles.openfreemap.org/styles/liberty',
+      attribution:'<a href="https://openfreemap.org" target="_blank">OpenFreeMap</a> &copy; <a href="https://www.openmaptiles.org/" target="_blank">OpenMapTiles</a> · '+osmAttr}).addTo(LMAP);
+    else L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19, attribution:osmAttr}).addTo(LMAP);
+    mapLayers = L.layerGroup().addTo(LMAP); mapSig = '';
+  }
+  LMAP.invalidateSize(); drawMap(); setTimeout(()=>{ if(LMAP && tab==='map'){ LMAP.invalidateSize(); } }, 150);
+  geocodeMissing();
+}
+function drawMap(){
+  const all = mapStops().filter(s=>s.g && s.g.ll), stops = all.filter(s=>mapDay==='all' || s.day===mapDay);
+  mapLayers.clearLayers();
+  for(let i=1; i<stops.length; i++){ const a = stops[i-1], b = stops[i]; const km = kmBetween(a.g.ll, b.g.ll);
+    if(a.day!==b.day && km < 2) continue;                       // overnight at the same place
+    const far = geoZone(a.g.ll) !== geoZone(b.g.ll);           // Hanoi ↔ Lào Cai ↔ Sapa
+    L.polyline([a.g.ll, b.g.ll], {color:dayColor(b.day), weight: far?3:4, opacity: far?.75:.85, dashArray: far?'8 10':null}).addTo(mapLayers); }
+  stops.forEach(st=>{ const c = dayColor(st.day), d = state.days.find(d=>d.id===st.day);
+    const icon = L.divIcon({className:'', html:`<div class="pin" style="background:${c}"><b>${st.n}</b></div>`, iconSize:[26,26], iconAnchor:[13,26], popupAnchor:[0,-24]});
+    const im = st.items.find(x=>safeUrl(x.img));
+    const pop = `<div class="mpop">${im?`<img src="${esc(im.img)}" alt="" loading="lazy">`:''}
+      <div style="color:${c};font-weight:700">${esc(d?d.title.split(' · ')[0]:'')} · ${esc(dayShortDate(d||{}))} · จุดที่ ${st.n}</div>
+      ${st.items.map(x=>`<div><b>${esc(x.time)}</b> ${esc(x.title)}</div>`).join('')}
+      <div class="small" style="margin-top:4px">${st.g.a?'≈ ':''}${esc(st.loc)}</div>
+      <a href="${esc(M(st.loc))}" target="_blank" rel="noopener">เปิดใน Google Maps ↗</a></div>`;
+    L.marker(st.g.ll, {icon, title:st.items[0].title, zIndexOffset: st.n}).bindPopup(pop, {maxWidth:250, autoPanPaddingTopLeft:[10,60]}).addTo(mapLayers); });
+  const sig = mapDay + '|' + stops.map(s=>s.g.ll.join(',')).join(';');
+  if(sig !== mapSig){ mapSig = sig;
+    if(stops.length===1) LMAP.setView(stops[0].g.ll, 15);
+    else if(stops.length) LMAP.fitBounds(L.latLngBounds(stops.map(s=>s.g.ll)), {padding:[28,28], maxZoom:16});
+    else LMAP.setView([21.6,104.9], 7); }
+}
+/* Nominatim usage policy: max 1 request/second, results cached in the shared store so each place is looked up only once */
+async function nomQ(q){
+  const wait = lastGeo + 1100 - Date.now(); if(wait > 0) await new Promise(r=>setTimeout(r, wait)); lastGeo = Date.now();
+  const r = await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=vn&accept-language=vi&q=' + encodeURIComponent(q));
+  if(!r.ok) throw new Error('nominatim ' + r.status); return r.json();
+}
+const GEO_ADMIN = /^(country|state|province|region|county|city|town|municipality|city_district|district|suburb|quarter|borough)$/;
+async function geocode(l){
+  let j = await nomQ(l); if(j[0]) return {ll:[+(+j[0].lat).toFixed(5), +(+j[0].lon).toFixed(5)]};
+  const parts = l.split(',').map(x=>x.trim()).filter(Boolean);
+  if(parts.length > 1){ j = await nomQ(parts.slice(1).join(', '));
+    if(j[0] && !GEO_ADMIN.test(j[0].addresstype||'')) return {ll:[+(+j[0].lat).toFixed(5), +(+j[0].lon).toFixed(5)], a:1}; }
+  return null;
+}
+async function geocodeMissing(){
+  if(geoBusy) return; geoBusy = true;
+  try{
+    const need = [...new Set(mapStops().filter(s=>!s.g || (s.g.fail && Date.now()-s.g.fail > 7*864e5)).map(s=>s.loc))].filter(l=>!geoTried.has(l)).slice(0, 15);
+    for(const l of need){ geoTried.add(l); let res;
+      try{ res = await geocode(l); }catch(e){ console.warn(e); break; }
+      const val = res ? {ll:res.ll, a:res.a?1:0, ts:Date.now()} : {fail:Date.now()};
+      mutate(st=>{ st.geo = st.geo || {}; if(!(st.geo[l] && st.geo[l].ll)) st.geo[l] = val; }, '', 'ระบบ'); }
+  } finally { geoBusy = false; }
+}
 /* ===================== ACTIVITY LOG ===================== */
 const LOG_TYPES = ['✅ จองที่พัก','✅ จองรถบัส','เพิ่ม','แก้ไข','ลบ','ย้าย','ตัดออกจากงบ','รวมกลับ','แก้ราคา','โหวตแผนกลับ','❤️ที่พัก','แก้โน้ต','รีเซ็ต','ระบบ'];
 const TYPE_ICON = {'✅ จองที่พัก':'🏨','✅ จองรถบัส':'🚌','เพิ่ม':'➕','แก้ไข':'✏️','ลบ':'🗑️','ย้าย':'↕️','ตัดออกจากงบ':'✂️','รวมกลับ':'↩️','แก้ราคา':'💰','โหวตแผนกลับ':'✈️','❤️ที่พัก':'❤️','แก้โน้ต':'📝','รีเซ็ต':'♻️','ระบบ':'⚙️'};
@@ -722,13 +874,14 @@ function render(){
   $('#ppl').innerHTML = PEOPLE.map(p=>`<span class="chip">👤 ${esc(FULL[p])}</span>`).join('');
   $('#meSel').innerHTML = `<option value="">— เลือกชื่อ —</option>` + PEOPLE.map(p=>`<option ${p===me?'selected':''}>${p}</option>`).join('');
   document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===tab));
-  const f = {plan:renderPlan,budget:renderBudget,log:renderLog,hotel:renderHotels,return:renderReturn,info:renderInfo,set:renderSettings}[tab];
+  const f = {plan:renderPlan,map:renderMap,budget:renderBudget,log:renderLog,hotel:renderHotels,return:renderReturn,info:renderInfo,set:renderSettings}[tab];
   // keep focus-safe: don't re-render textarea being typed in
   $('#main').innerHTML = f();
+  if(tab==='map') setupMap();
   $('#foot').innerHTML = `ภาพ: Wikimedia Commons (ดูเครดิตในแท็บ 🎒 ข้อมูล)<br>แก้ไขล่าสุดโดย <b>${esc(state.updatedBy||'-')}</b> · ${new Date(state.updatedAt||Date.now()).toLocaleString('th-TH')} · rev ${state.rev}<br>ทริปไอดี: ${esc(KEY)}`;
 }
 function renderPlan(){
-  let h = state.retPlansObsolete ? `<div class="alert green">✅ <b>ขากลับจองแล้ว:</b> รถบัส G8 VIP Cabin พ. 30 ธ.ค. 13:00 ซาปา → 19:10 ฮานอย → นอนฮานอย → บิน VJ903 15:50 วันที่ 31 • <b>⚠️ ที่พักฮานอยคืน 30 ธ.ค. ยังไม่ได้จอง</b> → <a href="#" data-go="hotel">ดูตัวเลือก</a></div>` : `<div class="alert"><b>⚠️ ขากลับ 31 ธ.ค. เวลาตึงมาก</b> ไฟลท์ VJ903 ออก 15:50 จากโหน่ยบ่าย แต่ซาปาอยู่ห่าง ~5–6 ชม. แนะนำ <b>แผน B</b>: นั่งรถไฟกลางคืนกลับฮานอยคืน 30 ธ.ค. (ต้องจองเพิ่ม) → <a href="#" data-go="return">ดูรายละเอียด/โหวต</a></div>`;
+  let h = state.retPlansObsolete ? `<div class="alert green">✅ <b>ขากลับจองแล้ว:</b> รถบัส G8 VIP Cabin พ. 30 ธ.ค. 13:00 ซาปา → 19:10 ฮานอย → นอนฮานอย → บิน VJ903 15:50 วันที่ 31 • ${state.hotels.hanoi.some(h=>h.booked)?'🏨 ที่พักฮานอยคืน 30 ธ.ค. จองแล้ว ✅':'<b>⚠️ ที่พักฮานอยคืน 30 ธ.ค. ยังไม่ได้จอง</b> → <a href="#" data-go="hotel">ดูตัวเลือก</a>'}</div>` : `<div class="alert"><b>⚠️ ขากลับ 31 ธ.ค. เวลาตึงมาก</b> ไฟลท์ VJ903 ออก 15:50 จากโหน่ยบ่าย แต่ซาปาอยู่ห่าง ~5–6 ชม. แนะนำ <b>แผน B</b>: นั่งรถไฟกลางคืนกลับฮานอยคืน 30 ธ.ค. (ต้องจองเพิ่ม) → <a href="#" data-go="return">ดูรายละเอียด/โหวต</a></div>`;
   { const T = budgetTotals(); h += `<div class="alert green" style="cursor:pointer" data-act="gobudget">💰 งบตอนนี้ ~<b>${B$(T.total)}/คน</b> (4 คน ${B$(T.total*4)}) — แตะเพื่อดูโดนัทชาร์ต</div>`; }
   h += `<div class="small" style="margin:6px 4px">💱 ราคาทั้งหมดเป็นเงินบาทโดยประมาณ · อัตรา 1 ฿ ≈ ${RATE.VND_PER_THB} ₫ · 1 US$ ≈ ${RATE.THB_PER_USD} ฿ (อัปเดต ${RATE.date})</div>`;
   if(!me) h += `<div class="alert info">👋 เลือก “ฉันคือ” ด้านบนก่อน เพื่อให้เพื่อนเห็นว่าใครแก้ไข/โหวต</div>`;
@@ -775,7 +928,7 @@ function renderPlan(){
 function hotelCard(x){
   const v = state.votes[x.id]||[]; const mine = v.includes(me);
   return `<div class="card hotel"><div class="pad">
-    <h3>${esc(x.name)} ${x.booked?'<span class="tag lock" style="background:#dcfce7;color:#166534">✅ จองแล้ว</span>':(state.hotels.sapa.some(h=>h.booked)&&state.hotels.sapa.includes(x)?'<span class="tag">ตัวเลือกสำรอง</span>':'')}</h3>
+    <h3>${esc(x.name)} ${x.booked?'<span class="tag lock" style="background:#dcfce7;color:#166534">✅ จองแล้ว</span>':(Object.values(state.hotels).some(L=>L.includes(x)&&L.some(h=>h.booked))?'<span class="tag">ตัวเลือกสำรอง</span>':'')}</h3>
     <div class="small">📍 ${esc(x.area)}</div>
     ${x.booked?`<div class="alert green" style="margin:8px 0 0;font-size:13.5px">🧾 <b>${esc(x.booked.site)}</b> เลขที่จอง ${esc(x.booked.ref)}<br>📅 ${esc(x.booked.checkin)} → ${esc(x.booked.checkout)} (${x.booked.nights} คืน) · ${x.booked.rooms} ห้อง / 4 คน<br>
       💰 ห้อง ${x.booked.roomsVND.toLocaleString('en-US')} ₫ + ภาษี/ค่าธรรมเนียม ${x.booked.feesVND.toLocaleString('en-US')} ₫ = <b>${x.booked.totalVND.toLocaleString('en-US')} ₫ ≈ ${B$(vnd2thb(x.booked.totalVND))}</b> (≈ ${B$(vnd2thb(x.booked.totalVND)/4)}/คน)<br>
@@ -795,7 +948,7 @@ function renderHotels(){
   <h2 class="sec">🏔️ ซาปา (คืน 29 ธ.ค.${state.retPlansObsolete?'':' / + คืน 30 ถ้าเลือกแผน A'})</h2>${(()=>{ const b=state.hotels.sapa.find(h=>h.booked); return b?`<div class="alert green" style="margin:4px">✅ จองแล้ว: <b>${esc(b.name)}</b> คืน 29 ธ.ค. (2 ห้อง) — อีก 2 ที่ด้านล่างเป็นตัวเลือกสำรอง</div>`:''; })()}<div class="small" style="margin:0 4px">${top(state.hotels.sapa)}</div>
   ${state.hotels.sapa.map(hotelCard).join('')}
   <button class="btn sm sec" data-act="hadd" data-city="sapa">＋ เสนอที่พักซาปาเพิ่ม</button>
-  ${state.retPlansObsolete?`<h2 class="sec">🏙️ ฮานอย คืน 30 ธ.ค. (2 ห้อง / 4 คน)</h2>${state.hotels.hanoi.some(h=>h.booked)?'':'<div class="alert" style="margin:4px">⚠️ <b>ต้องจอง</b> — ยังไม่ได้จองที่พักฮานอยคืน 30 ธ.ค. รถบัสถึง 160 Trần Quang Khải 19:10 แนะนำนอนย่านเมืองเก่า/ใกล้ทะเลสาบคืนดาบ (เดินเที่ยวเช้า 31 ได้ แล้วออกสนามบิน 12:00) • งบประมาณใส่ไว้ ~฿800/คน</div>'}`:'<h2 class="sec">🏙️ ฮานอย (day-use 28 ธ.ค. และ/หรือ พักช่วงเช้า 31 ธ.ค. ตามแผน B)</h2>'}<div class="small" style="margin:0 4px">${top(state.hotels.hanoi)}</div>
+  ${state.retPlansObsolete?`<h2 class="sec">🏙️ ฮานอย คืน 30 ธ.ค.</h2>${state.hotels.hanoi.some(h=>h.booked)?'<div class="alert green" style="margin:4px">✅ จองแล้ว: <b>'+esc(state.hotels.hanoi.find(h=>h.booked).name)+'</b> คืน 30 ธ.ค. (1 ห้อง) — อีก 3 ที่ด้านล่างเป็นตัวเลือกสำรอง</div>':'<div class="alert" style="margin:4px">⚠️ <b>ต้องจอง</b> — ยังไม่ได้จองที่พักฮานอยคืน 30 ธ.ค. รถบัสถึง 160 Trần Quang Khải 19:10 แนะนำนอนย่านเมืองเก่า/ใกล้ทะเลสาบคืนดาบ (เดินเที่ยวเช้า 31 ได้ แล้วออกสนามบิน 12:00) • งบประมาณใส่ไว้ ~฿800/คน</div>'}`:'<h2 class="sec">🏙️ ฮานอย (day-use 28 ธ.ค. และ/หรือ พักช่วงเช้า 31 ธ.ค. ตามแผน B)</h2>'}<div class="small" style="margin:0 4px">${top(state.hotels.hanoi)}</div>
   ${state.hotels.hanoi.map(hotelCard).join('')}
   <button class="btn sm sec" data-act="hadd" data-city="hanoi">＋ เสนอที่พักฮานอยเพิ่ม</button>`;
 }
@@ -811,7 +964,7 @@ function renderReturn(){
   <div class="card"><div class="pad"><h3 style="margin:0 0 6px">🗓️ ลำดับการเดินทางกลับ</h3><ul style="margin:0;padding-left:20px;font-size:14px">
     <li><b>30 ธ.ค.</b> เช็คเอาท์ CatCat Hills ฝากกระเป๋า → เที่ยวเช้าใกล้ตัวเมือง (Moana, หำโหรง) → มื้อกลางวัน → รับกระเป๋า → <b>ถึงออฟฟิศ N2 ~12:30</b></li>
     <li>🚌 13:00 → 19:10 ฮานอย (160 Trần Quang Khải) → Grab ~10 นาทีไปที่พัก</li>
-    <li>🏨 นอนฮานอยคืน 30 ธ.ค. — <b>⚠️ ยังไม่ได้จอง</b> <a href="#" data-go="hotel">ดูตัวเลือก</a></li>
+    <li>🏨 นอนฮานอยคืน 30 ธ.ค. — ${state.hotels.hanoi.some(h=>h.booked)?'✅ จองแล้ว (Agoda) <a href="#" data-go="hotel">ดูรายละเอียด</a>':'<b>⚠️ ยังไม่ได้จอง</b> <a href="#" data-go="hotel">ดูตัวเลือก</a>'}</li>
     <li><b>31 ธ.ค.</b> เช้าเมืองเก่าสบายๆ → 12:00 Grab ไปโหน่ยบ่าย T2 → ✈️ VJ903 15:50 → สุวรรณภูมิ 17:40</li></ul></div></div>
 `;
   const vb = k => { const v = state.retVotes[k]||[]; const mine = v.includes(me);
@@ -845,7 +998,7 @@ function renderInfo(){
    <tr><td>🚆 รถไฟ</td><td><b>SP7</b> ฮานอย → ลาวกาย · 28 ธ.ค. 22:40 → ~06:27 (29 ธ.ค.) · ตู้ 3 · ห้อง 4 เตียง · Pitibhak เตียง 19 (บน) · <i>เพื่อนๆ เช็คเลขเตียงในตั๋วตัวเอง</i></td></tr>
    <tr><td>🏨 ที่พักซาปา</td><td><b>Sapa CatCat Hills Resort & Spa</b> (Agoda ${HOTEL_BOOKING.ref}) · อ. 29 → พ. 30 ธ.ค. (1 คืน) · 2 ห้อง · เช็คอิน 14:00 · ≈ ${B$(vnd2thb(HOTEL_BOOKING.totalVND))} · ตัดบัตร 20 ธ.ค. · ยกเลิกฟรีถึง 21 ธ.ค. 23:59</td></tr>
    <tr><td>🚌 รถบัสกลับ</td><td><b>G8 SAPA OPEN TOUR · VIP Cabin</b> (Vexere ${BUS_BOOKING.ref}) · พ. 30 ธ.ค. · ซาปา (ออฟฟิศถนน N2) 13:00 → ฮานอย 160 Trần Quang Khải 19:10 · 4 คน ที่นั่ง ${BUS_BOOKING.seats} · ${B$(BUS_BOOKING.priceTHB)}/คน (รวม ${B$(BUS_BOOKING.priceTHB*4)}) · ยกเลิกฟรีก่อน 29 ธ.ค. 12:59</td></tr>
-   <tr><td>🏨 ฮานอย</td><td>คืน 30 ธ.ค. — <b style="color:#b91c1c">⚠️ ยังไม่ได้จอง</b></td></tr>
+   <tr><td>🏨 ที่พักฮานอย</td><td><b>${esc(HN_NAME)}</b> (Agoda ${HANOI_BOOKING.ref}) · พ. 30 → พฤ. 31 ธ.ค. (1 คืน) · 1 ห้อง · เช็คอิน 14:00 · ≈ ${B$(vnd2thb(HANOI_BOOKING.totalVND))} (≈ ${B$(hnPP())}/คน) · ตัดบัตร 14 ธ.ค. · ยกเลิกฟรีถึง 15 ธ.ค. 23:59</td></tr>
    <tr><td>✈️ ขากลับ</td><td><b>VietJet VJ903</b> · พฤ. 31 ธ.ค. · โหน่ยบ่าย T2 15:50 → สุวรรณภูมิ 17:40 · กระเป๋าถือ (ไม่มีโหลด)</td></tr>
   </table>
   <div class="small" style="margin-top:6px">🔐 รหัสการจองและเลขพาสปอร์ตไม่ได้ใส่ไว้ในหน้านี้ (เพราะเป็นลิงก์แชร์) ดูในอีเมล/ตั๋วของแต่ละคน</div></div></div>
@@ -972,6 +1125,8 @@ document.addEventListener('click', e => {
     mutate(s=>{ if(s.budget) s.budget.lines=s.budget.lines.filter(l=>'l:'+l.id!==key); },'ลบแล้ว', null, {type:'ลบ', item:'รายการงบ: '+(row?row.title:''), ch:row?[['งบ/คน',B$(row.cost),'']]:[]}); return; }
   if(a==='badd'){ const cat=b.dataset.cat; const t=prompt('ชื่อรายการงบ (เช่น ค่าเช่าเสื้อกันหนาว)'); if(!t) return; const c=+prompt('ราคาต่อคน (บาท)','0')||0; const id='c-'+uid();
     mutate(s=>{ s.budget=s.budget||JSON.parse(JSON.stringify(SEED_BUDGET)); if(!s.budget.lines.some(l=>l.id===id)) s.budget.lines.push({id,title:t.trim(),cat,costTHB:Math.max(0,Math.round(c)),custom:true}); },'เพิ่มรายการงบแล้ว', null, {type:'เพิ่ม', item:'รายการงบ: '+t.trim(), ch:[['งบ/คน','',B$(Math.max(0,Math.round(c)))]], note:'หมวด '+CATK[cat].n}); return; }
+  if(a==='mapday'){ mapDay = b.dataset.d; render(); return; }
+  if(a==='mapgo'){ const g = b.dataset.ll.split(',').map(Number); if(LMAP){ LMAP.setView(g, 16); } return; }
   if(a==='golog'){ tab='log'; render(); scrollTo(0,0); return; }
   if(a==='logwho'){ logWho = logWho===b.dataset.who ? '' : b.dataset.who; render(); return; }
   if(a==='rmode'){ routeMode[dayId]=b.dataset.m; localStorage.setItem('sapaRouteMode',JSON.stringify(routeMode)); render(); return; }
